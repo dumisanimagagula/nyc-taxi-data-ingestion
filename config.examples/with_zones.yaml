@@ -1,0 +1,43 @@
+# Configuration with zones ingestion enabled
+# Usage: docker compose run --rm -e CONFIG_PATH=config.examples/with_zones.yaml ingestor
+
+# Data source configuration
+data_source:
+  year: 2021
+  month: 1
+  base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  taxi_type: yellow
+
+# Database configuration
+database:
+  connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
+  table_name: "yellow_tripdata"
+
+# Ingestion parameters
+ingestion:
+  chunk_size: 250000
+  n_jobs: 1
+  drop_existing: false
+  if_exists: "replace"
+
+# Zones reference data
+zones:
+  # Enable zones ingestion (will run before trip data ingestion)
+  enabled: true
+  
+  # URL to zones CSV file
+  url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+  
+  # Table name for zones data
+  table_name: "zones"
+  
+  # Create index on LocationID for faster lookups
+  create_index: true
+  
+  # Drop existing zones table before ingestion
+  drop_existing: true
+
+# Logging
+logging:
+  level: "INFO"
+  file: ""

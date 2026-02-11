@@ -1,0 +1,41 @@
+# Q1 2021 Batch Ingestion with Zones
+# Ingests zones reference data first, then all 3 months of Q1 2021
+
+# Data source defaults
+data_source:
+  base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  taxi_type: yellow
+
+# Batch sources - Q1 2021 (Jan, Feb, Mar)
+data_sources:
+  - year: 2021
+    month: 1
+  - year: 2021
+    month: 2
+  - year: 2021
+    month: 3
+
+# Database configuration
+database:
+  connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
+  table_name: "yellow_tripdata"
+
+# Ingestion parameters
+ingestion:
+  chunk_size: 250000
+  n_jobs: 1
+  drop_existing: false
+  if_exists: "replace"
+
+# Zones reference data - enabled for Q1 analysis
+zones:
+  enabled: true
+  url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+  table_name: "zones"
+  create_index: true
+  drop_existing: true
+
+# Logging
+logging:
+  level: "INFO"
+  file: ""

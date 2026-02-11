@@ -1,0 +1,66 @@
+# ============================================================================
+# LAKEHOUSE PLATFORM - PYTHON DEPENDENCIES
+# ============================================================================
+
+# --------------------------------
+# Data Processing Core
+# --------------------------------
+# Fast data manipulation
+polars==1.17.1
+pandas==2.3.3
+pyarrow==15.0.0
+
+# --------------------------------
+# Lakehouse / Iceberg
+# --------------------------------
+# Apache Iceberg for Python
+pyiceberg[s3fs,hive,pyarrow]==0.7.1
+
+# S3/MinIO client
+boto3==1.35.0
+s3fs==2023.12.2
+
+# --------------------------------
+# Spark Integration
+# --------------------------------
+pyspark==3.5.0
+
+# --------------------------------
+# Database Connectors
+# --------------------------------
+sqlalchemy==1.4.54
+psycopg2-binary==2.9.11  # PostgreSQL (for metastore)
+trino==0.329.0  # Trino connector
+
+# --------------------------------
+# Configuration & Orchestration
+# --------------------------------
+pyyaml==6.0.1
+click==8.1.7
+pydantic==2.8.2
+
+# --------------------------------
+# Airflow Providers (for DAG development)
+# --------------------------------
+apache-airflow==2.9.3
+apache-airflow-providers-apache-spark==4.9.0
+apache-airflow-providers-docker==3.12.0
+
+# --------------------------------
+# Data Quality
+# --------------------------------
+great-expectations==0.18.20
+
+# --------------------------------
+# Utilities
+# --------------------------------
+tqdm==4.67.1  # Progress bars
+tenacity==8.3.0  # Retries (compatible with pyiceberg)
+python-dotenv==1.0.1  # Environment variables
+
+# --------------------------------
+# Testing
+# --------------------------------
+pytest==8.3.3
+pytest-cov==6.0.0
+

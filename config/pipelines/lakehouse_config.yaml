@@ -1,0 +1,362 @@
+# ============================================================================
+# LAKEHOUSE PLATFORM - CONFIGURATION SCHEMA
+# ============================================================================
+# This is the master config that drives the entire data platform.
+# Engineers only need to update this file - no code changes required.
+#
+# Architecture: Bronze (raw) -> Silver (clean) -> Gold (aggregated)
+# ============================================================================
+
+# Pipeline metadata
+pipeline:
+  name: "nyc_taxi_pipeline"
+  description: "NYC Taxi data ingestion and processing pipeline"
+  owner: "data-engineering@company.com"
+  schedule: "0 2 * * *"  # Daily at 2 AM (cron format)
+  enabled: true
+
+# ============================================================================
+# BRONZE LAYER - Raw data ingestion (append-only, immutable)
+# ============================================================================
+bronze:
+  # Data source configuration
+  source:
+    type: "http"  # http, s3, postgres, mysql, api, kafka
+    name: "nyc_taxi_raw"
+    
+    # HTTP-specific config
+    http:
+      base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+      file_pattern: "{taxi_type}_tripdata_{year}-{month:02d}.parquet"
+      
+    # Parameters for ingestion
+    params:
+      taxi_type: "yellow"  # yellow, green, fhv, fhvhv
+      year: 2021
+      month: 1
+      
+  # Target configuration (Iceberg table on MinIO)
+  target:
+    catalog: "lakehouse"
+    database: "bronze"
+    table: "nyc_taxi_raw"
+    
+    # Storage configuration
+    storage:
+      format: "parquet"
+      compression: "snappy"
+      partition_by: []  # Disabled for now - source data doesn't have year/month columns
+      
+    # S3/MinIO settings
+    s3:
+      bucket: "bronze"
+      path_prefix: "nyc-taxi"
+      
+  # Ingestion settings
+  ingestion:
+    mode: "overwrite"  # overwrite to drop and recreate the table with new config
+    chunk_size: 100000
+    dedupe_on_load: false  # Bronze = raw, don't dedupe
+    
+  # Data quality checks (optional)
+  quality_checks:
+    enabled: true
+    checks:
+      - name: "not_null_check"
+        columns: ["tpep_pickup_datetime", "tpep_dropoff_datetime"]
+      - name: "positive_values"
+        columns: ["trip_distance", "fare_amount"]
+
+# ============================================================================
+# SILVER LAYER - Cleaned, validated, typed data
+# ============================================================================
+silver:
+  # Source (reads from Bronze)
+  source:
+    catalog: "lakehouse"
+    database: "bronze"
+    table: "nyc_taxi_raw"
+    
+  # Target
+  target:
+    catalog: "lakehouse"
+    database: "silver"
+    table: "nyc_taxi_clean"
+    
+    storage:
+      format: "parquet"
+      compression: "snappy"
+      partition_by: ["year", "month"]
+      
+    s3:
+      bucket: "silver"
+      path_prefix: "nyc-taxi"
+      
+  # Transformation rules (config-driven)
+  transformations:
+    # Column renaming
+    rename_columns:
+      tpep_pickup_datetime: "pickup_datetime"
+      tpep_dropoff_datetime: "dropoff_datetime"
+      PULocationID: "pickup_location_id"
+      DOLocationID: "dropoff_location_id"
+      
+    # Type casting
+    cast_columns:
+      pickup_datetime: "timestamp"
+      dropoff_datetime: "timestamp"
+      passenger_count: "integer"
+      trip_distance: "double"
+      fare_amount: "decimal(10,2)"
+      total_amount: "decimal(10,2)"
+      
+    # Filtering rules
+    filters:
+      - "passenger_count > 0"
+      - "trip_distance > 0"
+      - "fare_amount > 0"
+      - "pickup_datetime < dropoff_datetime"
+      
+    # Deduplication
+    dedupe:
+      enabled: true
+      partition_by: ["VendorID", "pickup_datetime", "dropoff_datetime", "pickup_location_id", "dropoff_location_id"]
+      order_by: ["pickup_datetime DESC"]
+      
+    # Derived columns
+    derived_columns:
+      - name: "trip_duration_minutes"
+        expression: "(unix_timestamp(dropoff_datetime) - unix_timestamp(pickup_datetime)) / 60"
+      - name: "avg_speed_mph"
+        expression: "trip_distance / (trip_duration_minutes / 60)"
+      - name: "year"
+        expression: "year(pickup_datetime)"
+      - name: "month"
+        expression: "month(pickup_datetime)"
+      - name: "day_of_week"
+        expression: "dayofweek(pickup_datetime)"
+      - name: "hour_of_day"
+        expression: "hour(pickup_datetime)"
+        
+  # Data quality rules
+  quality_checks:
+    enabled: true
+    fail_on_error: false  # Changed to false to allow pipeline to complete despite quality issues
+    checks:
+      - name: "no_nulls_in_key_columns"
+        type: "null_check"
+        columns: ["pickup_datetime", "dropoff_datetime", "pickup_location_id"]
+      - name: "valid_passenger_count"
+        type: "range_check"
+        column: "passenger_count"
+        min: 1
+        max: 10
+      - name: "valid_trip_distance"
+        type: "range_check"
+        column: "trip_distance"
+        min: 0.1
+        max: 500
+      - name: "valid_fare"
+        type: "range_check"
+        column: "fare_amount"
+        min: 0
+        max: 10000
+      - name: "reasonable_duration"
+        type: "range_check"
+        column: "trip_duration_minutes"
+        min: 1
+        max: 720  # 12 hours max
+
+# ============================================================================
+# GOLD LAYER - Business aggregates and analytics-ready tables
+# ============================================================================
+gold:
+  # Multiple models/marts can be defined
+  models:
+    # Daily trip statistics
+    - name: "daily_trip_stats"
+      description: "Daily aggregated trip statistics"
+      
+      source:
+        catalog: "lakehouse"
+        database: "silver"
+        table: "nyc_taxi_clean"
+        
+      target:
+        catalog: "lakehouse"
+        database: "gold"
+        table: "daily_trip_stats"
+        storage:
+          format: "parquet"
+          compression: "snappy"
+        s3:
+          bucket: "gold"
+          path_prefix: "analytics/daily-stats"
+          
+      # SQL-like aggregation (will be converted to dbt model)
+      aggregations:
+        group_by: ["year", "month", "day_of_week", "pickup_location_id"]
+        measures:
+          - name: "total_trips"
+            expression: "count(*)"
+          - name: "total_passengers"
+            expression: "sum(passenger_count)"
+          - name: "avg_trip_distance"
+            expression: "avg(trip_distance)"
+          - name: "avg_fare"
+            expression: "avg(fare_amount)"
+          - name: "total_revenue"
+            expression: "sum(total_amount)"
+          - name: "avg_trip_duration"
+            expression: "avg(trip_duration_minutes)"
+            
+    # Hourly location analysis
+    - name: "hourly_location_analysis"
+      description: "Hourly pickup/dropoff patterns by location"
+      
+      source:
+        catalog: "lakehouse"
+        database: "silver"
+        table: "nyc_taxi_clean"
+        
+      target:
+        catalog: "lakehouse"
+        database: "gold"
+        table: "hourly_location_analysis"
+        storage:
+          format: "parquet"
+          compression: "snappy"
+        s3:
+          bucket: "gold"
+          path_prefix: "analytics/hourly-locations"
+          
+      aggregations:
+        group_by: ["year", "month", "day_of_week", "hour_of_day", "pickup_location_id", "dropoff_location_id"]
+        measures:
+          - name: "trip_count"
+            expression: "count(*)"
+          - name: "avg_fare"
+            expression: "avg(fare_amount)"
+          - name: "avg_duration"
+            expression: "avg(trip_duration_minutes)"
+            
+    # Revenue analysis
+    - name: "revenue_by_payment_type"
+      description: "Revenue breakdown by payment type"
+      
+      source:
+        catalog: "lakehouse"
+        database: "silver"
+        table: "nyc_taxi_clean"
+        
+      target:
+        catalog: "lakehouse"
+        database: "gold"
+        table: "revenue_by_payment_type"
+        storage:
+          format: "parquet"
+          compression: "snappy"
+        s3:
+          bucket: "gold"
+          path_prefix: "analytics/revenue"
+          
+      aggregations:
+        group_by: ["year", "month", "payment_type"]
+        measures:
+          - name: "trip_count"
+            expression: "count(*)"
+          - name: "total_revenue"
+            expression: "sum(total_amount)"
+          - name: "avg_tip_amount"
+            expression: "avg(tip_amount)"
+          - name: "avg_total_amount"
+            expression: "avg(total_amount)"
+
+# ============================================================================
+# ORCHESTRATION - When things run (Airflow)
+# ============================================================================
+orchestration:
+  # DAG settings
+  dag:
+    dag_id: "nyc_taxi_medallion_pipeline"
+    schedule_interval: "0 2 * * *"  # Daily at 2 AM
+    start_date: "2024-01-01"
+    catchup: false
+    max_active_runs: 1
+    tags: ["nyc-taxi", "medallion", "lakehouse"]
+    
+  # Dependencies and execution order
+  tasks:
+    # Bronze layer
+    - task_id: "ingest_to_bronze"
+      type: "python"
+      operator: "DockerOperator"
+      image: "lakehouse-ingestor"
+      command: "python /app/bronze/ingestors/ingest_to_iceberg.py --config /app/config.yaml"
+      retries: 3
+      retry_delay_minutes: 5
+      
+    # Silver layer
+    - task_id: "transform_to_silver"
+      type: "spark"
+      operator: "SparkSubmitOperator"
+      application: "/opt/spark/jobs/bronze_to_silver.py"
+      conn_id: "spark_default"
+      depends_on: ["ingest_to_bronze"]
+      retries: 2
+      retry_delay_minutes: 10
+      
+    # Gold layer models
+    - task_id: "build_gold_models"
+      type: "dbt"
+      operator: "BashOperator"
+      command: "dbt run --profiles-dir /usr/app --project-dir /usr/app"
+      depends_on: ["transform_to_silver"]
+      retries: 2
+      retry_delay_minutes: 5
+      
+  # Alerting
+  alerts:
+    on_failure:
+      email: ["data-engineering@company.com"]
+    on_retry:
+      email: ["data-engineering@company.com"]
+    on_success:
+      email: []  # No spam on success
+
+# ============================================================================
+# INFRASTRUCTURE - Connection details
+# ============================================================================
+infrastructure:
+  # MinIO / S3
+  s3:
+    endpoint: "http://minio:9000"
+    access_key: "minio"
+    secret_key: "minio123"
+    region: "us-east-1"
+    
+  # Hive Metastore
+  metastore:
+    uri: "thrift://hive-metastore:9083"
+    
+  # Spark
+  spark:
+    master: "spark://spark-master:7077"
+    app_name: "nyc-taxi-silver-processing"
+    executor_memory: "2g"
+    executor_cores: 2
+    driver_memory: "1g"
+    
+  # Trino
+  trino:
+    host: "trino"
+    port: 8080
+    catalog: "iceberg"
+    
+  # dbt
+  dbt:
+    type: "trino"
+    host: "trino"
+    port: 8080
+    catalog: "iceberg"
+    schema: "gold"

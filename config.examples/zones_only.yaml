@@ -1,0 +1,29 @@
+# Configuration for ingesting only zones reference data
+# Usage: docker compose run --rm -e CONFIG_PATH=config.examples/zones_only.yaml ingestor python ingest_zones.py
+
+# Database configuration
+database:
+  connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
+  table_name: "yellow_tripdata"  # Not used for zones, but required by schema
+
+# Zones reference data
+zones:
+  # Enable zones ingestion
+  enabled: true
+  
+  # URL to zones CSV file
+  url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+  
+  # Table name for zones data
+  table_name: "zones"
+  
+  # Create index on LocationID for faster lookups
+  create_index: true
+  
+  # Drop existing zones table before ingestion
+  drop_existing: true
+
+# Logging
+logging:
+  level: "INFO"
+  file: ""

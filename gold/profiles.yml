@@ -1,0 +1,15 @@
+gold_profile:
+  target: prod
+  outputs:
+    prod:
+      type: spark
+      method: thrift
+      host: spark-master
+      port: 10000
+      user: spark
+      schema: gold
+      threads: 4
+      # Spark SQL with Iceberg support
+      connect_retries: 3
+      connect_timeout: 10
+      user_impersonation: false

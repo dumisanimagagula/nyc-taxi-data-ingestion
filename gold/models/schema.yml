@@ -1,0 +1,42 @@
+version: 2
+
+sources:
+  - name: silver
+    database: default
+    schema: silver
+    tables:
+      - name: nyc_taxi_clean
+        description: "Cleaned and validated taxi trip data from Silver layer"
+
+models:
+  - name: daily_trip_stats
+    description: "Daily aggregated trip statistics by location"
+    columns:
+      - name: year
+        description: "Year of the trip"
+      - name: month
+        description: "Month of the trip"
+      - name: day_of_week
+        description: "Day of week (1-7)"
+      - name: pickup_location_id
+        description: "Pickup location identifier"
+      - name: total_trips
+        description: "Total number of trips"
+      - name: total_revenue
+        description: "Total revenue generated"
+        
+  - name: hourly_location_analysis
+    description: "Hourly pickup/dropoff patterns by location"
+    columns:
+      - name: hour_of_day
+        description: "Hour of day (0-23)"
+      - name: trip_count
+        description: "Number of trips in this hour"
+        
+  - name: revenue_by_payment_type
+    description: "Revenue breakdown by payment method"
+    columns:
+      - name: payment_type
+        description: "Payment method used"
+      - name: total_revenue
+        description: "Total revenue for this payment type"

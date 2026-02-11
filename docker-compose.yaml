@@ -118,6 +118,7 @@ services:
       - "8080:8080"   # Spark Master UI
     volumes:
       - ./silver/jobs:/opt/spark/jobs
+      - ./gold/jobs:/opt/spark/gold-jobs
       - ./config:/app/config
       - spark-warehouse:/opt/spark/warehouse
       - spark-checkpoints:/opt/spark/checkpoints
@@ -269,7 +270,7 @@ services:
       _AIRFLOW_WWW_USER_PASSWORD: airflow
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
+      - airflow-logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/config:/opt/airflow/config
     entrypoint: /bin/bash
@@ -304,7 +305,7 @@ services:
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
+      - airflow-logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/config:/opt/airflow/config
       - ./src:/opt/airflow/src
@@ -340,7 +341,7 @@ services:
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     volumes:
       - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
+      - airflow-logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/config:/opt/airflow/config
       - ./src:/opt/airflow/src

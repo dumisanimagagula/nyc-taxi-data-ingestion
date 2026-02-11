@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+# Install dbt-trino
+RUN pip install --no-cache-dir \
+    dbt-core==1.7.4 \
+    dbt-trino==1.7.1 \
+    pyyaml
+
+WORKDIR /usr/app
+
+# Copy dbt project
+COPY . /usr/app/
+
+CMD ["tail", "-f", "/dev/null"]

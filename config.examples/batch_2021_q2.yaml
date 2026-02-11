@@ -1,0 +1,41 @@
+# Batch Ingestion Configuration
+# Ingest multiple months in a single run
+# Note: Uses data_sources (plural) instead of data_source (singular)
+
+# Defaults for all sources (can be overridden per source)
+data_source:
+  base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  taxi_type: yellow
+
+# Multiple data sources to ingest
+data_sources:
+  # 2021 Q2 (April - June)
+  - year: 2021
+    month: 4
+  - year: 2021
+    month: 5
+  - year: 2021
+    month: 6
+
+# Database configuration
+database:
+  # Host options:
+  # - Local Python run (outside Docker):
+  #     postgresql://root:root@localhost:5432/ny_taxi
+  # - Docker Compose run (inside `ingestor` service):
+  #     postgresql://root:root@pgdatabase:5432/ny_taxi
+  # Choose the appropriate host based on how you run.
+  connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
+  table_name: "yellow_tripdata"
+
+# Ingestion parameters
+ingestion:
+  chunk_size: 250000
+  n_jobs: 1
+  drop_existing: false  # Keep existing data from other months
+  if_exists: "append"   # Append new data to table
+
+# Logging
+logging:
+  level: "INFO"
+  file: ""

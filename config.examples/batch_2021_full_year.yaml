@@ -1,0 +1,53 @@
+# Batch Ingestion: Full Year 2021
+# Ingest all 12 months of 2021 in one run
+
+data_source:
+  base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  taxi_type: yellow
+
+# All 12 months of 2021
+data_sources:
+  - year: 2021
+    month: 1
+  - year: 2021
+    month: 2
+  - year: 2021
+    month: 3
+  - year: 2021
+    month: 4
+  - year: 2021
+    month: 5
+  - year: 2021
+    month: 6
+  - year: 2021
+    month: 7
+  - year: 2021
+    month: 8
+  - year: 2021
+    month: 9
+  - year: 2021
+    month: 10
+  - year: 2021
+    month: 11
+  - year: 2021
+    month: 12
+
+database:
+  # Host options:
+  # - Local Python run (outside Docker):
+  #     postgresql://root:root@localhost:5432/ny_taxi
+  # - Docker Compose run (inside `ingestor` service):
+  #     postgresql://root:root@pgdatabase:5432/ny_taxi
+  # Choose the appropriate host based on how you run.
+  connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
+  table_name: "yellow_tripdata"
+
+ingestion:
+  chunk_size: 250000
+  n_jobs: 1
+  drop_existing: false
+  if_exists: "append"
+
+logging:
+  level: "INFO"
+  file: ""

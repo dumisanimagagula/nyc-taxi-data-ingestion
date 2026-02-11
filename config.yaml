@@ -1,0 +1,66 @@
+# NYC Taxi Data Ingestion Configuration
+# Modify this file to control what data gets ingested
+
+# Data source configuration
+data_source:
+  # Year to ingest
+  year: 2025
+  
+  # Month to ingest (1-12)
+  month: 11
+  
+  # Base URL for taxi data
+  base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  
+  # Type of taxi data: yellow, green, or fhv
+  taxi_type: green
+
+# Database configuration
+database:
+  # Connection string format: postgresql://user:password@host:port/database
+  # Use 'pgdatabase' when running in Docker, 'localhost' when running locally
+  connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
+  
+  # Table name
+  table_name: "green_trip_data"
+
+# Ingestion parameters
+ingestion:
+  # Chunk size for reading/writing (number of rows)
+  # Increased to 250k for better performance with COPY
+  chunk_size: 250000
+  
+  # Number of parallel jobs (for future optimization)
+  n_jobs: 1
+  
+  # Whether to drop existing table before ingestion
+  drop_existing: false
+  
+  # If to_sql method (replace/append)
+  # 'replace' = drop and recreate, 'append' = add to existing
+  if_exists: "replace"
+
+# Logging
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+  
+  # Log file path (optional, leave empty for console only)
+  file: ""
+
+# Zones reference data (optional)
+zones:
+  # Enable zones ingestion
+  enabled: true
+  
+  # URL to zones CSV file
+  url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+  
+  # Table name for zones data
+  table_name: "zones"
+  
+  # Create index on LocationID for faster lookups
+  create_index: true
+  
+  # Drop existing zones table before ingestion
+  drop_existing: true

@@ -1,0 +1,61 @@
+# Batch Ingestion: Full Year 2025
+# Ingest all 12 months of 2025 in one run
+
+data_source:
+  base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  taxi_type: yellow
+
+# All 12 months of 2025
+data_sources:
+  - year: 2025
+    month: 1
+  - year: 2025
+    month: 2
+  - year: 2025
+    month: 3
+  - year: 2025
+    month: 4
+  - year: 2025
+    month: 5
+  - year: 2025
+    month: 6
+  - year: 2025
+    month: 7
+  - year: 2025
+    month: 8
+  - year: 2025
+    month: 9
+  - year: 2025
+    month: 10
+  - year: 2025
+    month: 11
+  - year: 2025
+    month: 12
+
+database:
+  # Host options:
+  # - Local Python run (outside Docker):
+  #     postgresql://root:root@localhost:5432/ny_taxi
+  # - Docker Compose run (inside `ingestor` service):
+  #     postgresql://root:root@pgdatabase:5432/ny_taxi
+  # Choose the appropriate host based on how you run.
+  connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
+  table_name: "yellow_tripdata"
+
+ingestion:
+  chunk_size: 250000
+  n_jobs: 1
+  drop_existing: true  # Drop existing table to match 2025 schema
+  if_exists: "replace"
+
+# Zones reference data - enabled for enriched analysis
+zones:
+  enabled: true
+  url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+  table_name: "zones"
+  create_index: true
+  drop_existing: true
+
+logging:
+  level: "INFO"
+  file: ""
