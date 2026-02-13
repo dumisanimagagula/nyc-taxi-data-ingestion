@@ -7,6 +7,9 @@
 # Architecture: Bronze (raw) -> Silver (clean) -> Gold (aggregated)
 # ============================================================================
 
+# Configuration schema version (DO NOT MODIFY)
+version: "v1.0"
+
 # Pipeline metadata
 pipeline:
   name: "nyc_taxi_pipeline"
@@ -45,7 +48,9 @@ bronze:
     storage:
       format: "parquet"
       compression: "snappy"
-      partition_by: []  # Disabled for now - source data doesn't have year/month columns
+      # Partition by derived columns added during ingestion
+      # This enables partition pruning for faster queries
+      partition_by: ["year", "month"]  # Added after ingest for query optimization
       
     # S3/MinIO settings
     s3:
@@ -55,8 +60,23 @@ bronze:
   # Ingestion settings
   ingestion:
     mode: "overwrite"  # overwrite to drop and recreate the table with new config
-    chunk_size: 100000
+    # Optimized chunk size: balance between memory usage and I/O efficiency
+    # For systems with 4GB executor memory, 50k-75k rows per chunk is optimal
+    chunk_size: 50000  # Reduced from 100k to prevent OOM on large datasets
+    # Advanced ingestion options for performance
+    batch_fetch: true  # Fetch data in batches for better memory management
+    prefetch_size: 2  # Buffer 2 batches ahead for smoother I/O
     dedupe_on_load: false  # Bronze = raw, don't dedupe
+  
+  # Performance optimization for Bronze
+  performance:
+    # Enable caching for Bronze table in Spark
+    cache_in_memory: true
+    cache_level: "MEMORY_AND_DISK"  # Fallback to disk if memory insufficient
+    # For Bronze: prioritize raw data preservation, partition by time
+    partition_strategy: "time"  # year/month partitions for date range queries
+    # Statistics collection for query optimization
+    collect_statistics: true
     
   # Data quality checks (optional)
   quality_checks:
@@ -137,7 +157,26 @@ silver:
         expression: "dayofweek(pickup_datetime)"
       - name: "hour_of_day"
         expression: "hour(pickup_datetime)"
+      # Partition key derived columns (required before partitioning)
+      - name: "year"
+        expression: "year(pickup_datetime)"
+      - name: "month"
+        expression: "month(pickup_datetime)"
         
+  # Performance optimization for Silver
+  performance:
+    # Caching strategy for Silver transformation results
+    cache_after_read: true  # Cache Bronze read for iterative operations
+    cache_after_transform: true  # Cache intermediate transform results
+    cache_level: "MEMORY"  # Silver prioritizes speed over disk
+    # Shuffle optimization
+    shuffle_partitions: 200  # Override Spark's default for large datasets
+    # AQE (Adaptive Query Execution) for dynamic optimization
+    adaptive_query_execution: true
+    # Statistics-driven optimization
+    broadcast_threshold: 100  # MB threshold for broadcast joins
+    collect_statistics: true  # Collect stats after write for Gold layer
+  
   # Data quality rules
   quality_checks:
     enabled: true
@@ -192,6 +231,14 @@ gold:
         s3:
           bucket: "gold"
           path_prefix: "analytics/daily-stats"
+      
+      # Materialized view configuration for incremental refresh
+      materialization:
+        type: "materialized_view"  # Precompute and persist results
+        refresh_strategy: "incremental"  # Only process new/changed data
+        refresh_trigger: "daily"  # Refresh schedule
+        # Incremental config: processing only recent days
+        incremental_lookback_days: 7  # Reprocess last 7 days for late arrivals
           
       # SQL-like aggregation (will be converted to dbt model)
       aggregations:
@@ -229,6 +276,14 @@ gold:
         s3:
           bucket: "gold"
           path_prefix: "analytics/hourly-locations"
+      
+      # Materialized view for frequently accessed hourly metrics
+      materialization:
+        type: "materialized_view"
+        refresh_strategy: "full"  # Recreate entire view (smaller dataset)
+        refresh_trigger: "daily"
+        # Indexing strategy for common query patterns
+        index_on: ["year", "month", "hour_of_day", "pickup_location_id"]
           
       aggregations:
         group_by: ["year", "month", "day_of_week", "hour_of_day", "pickup_location_id", "dropoff_location_id"]
@@ -259,6 +314,14 @@ gold:
         s3:
           bucket: "gold"
           path_prefix: "analytics/revenue"
+      
+      # Materialized view with caching for fast access
+      materialization:
+        type: "materialized_view"
+        refresh_strategy: "incremental"
+        refresh_trigger: "daily"
+        # Partition materialized view for faster refresh
+        partition_by: ["year", "month"]
           
       aggregations:
         group_by: ["year", "month", "payment_type"]
@@ -271,6 +334,288 @@ gold:
             expression: "avg(tip_amount)"
           - name: "avg_total_amount"
             expression: "avg(total_amount)"
+
+# ============================================================================
+# PERFORMANCE OPTIMIZATION - Global performance settings
+# ============================================================================
+performance:
+  # Spark configuration overrides for optimal performance
+  spark:
+    # Adaptive Query Execution (AQE) for dynamic optimization
+    adaptive_query_execution: true
+    # Coalesce partitions after shuffle to reduce small files
+    shuffle_coalesce: true
+    # Dynamic partition pruning
+    dynamic_partition_pruning: true
+    # Broadcast join optimization
+    broadcast_join_max_size: 100  # MB
+  
+  # Caching strategy across layers
+  caching:
+    # Bronze: Cache raw data for repeated queries
+    bronze_cache: true
+    # Silver: Cache intermediate results
+    silver_cache: true
+    # Cache storage level (MEMORY, MEMORY_AND_DISK, DISK_ONLY)
+    cache_storage_level: "MEMORY_AND_DISK"
+  
+  # Query optimization settings
+  query_optimization:
+    # Enable cost-based optimization
+    cost_based_optimization: true
+    # Collect statistics for better planning
+    collect_column_stats: true
+    # Histogram collection for selectivity estimation
+    collect_histograms: true
+  
+  # Monitoring and metrics
+  monitoring:
+    # Track query execution times
+    track_execution_time: true
+    # Monitor resource utilization
+    track_resource_usage: true
+    # Log slow queries (milliseconds threshold)
+    slow_query_threshold: 5000
+
+# ============================================================================
+# DATA QUALITY & VALIDATION - Comprehensive quality monitoring
+# ============================================================================
+data_quality:
+  # Global settings
+  enabled: true  # Enable/disable all data quality checks
+  fail_on_error: false  # Stop pipeline on quality failures (false = log and continue)
+  min_quality_score: 70.0  # Minimum acceptable overall quality score (0-100)
+  
+  # Component toggles
+  enable_metrics: true  # Collect quality metrics (completeness, validity, consistency, accuracy, timeliness)
+  enable_error_tracking: true  # Track row-level errors and persist to Iceberg
+  enable_anomaly_detection: true  # Detect statistical anomalies
+  enable_expectations: true  # Run Great Expectations validation
+  enable_reconciliation: true  # Cross-layer reconciliation checks
+  
+  # Maximum errors to track per validation run (prevents memory issues)
+  max_errors_to_track: 1000
+  
+  # Column-level quality checks
+  checks:
+    columns:
+      # Pickup datetime - critical field
+      pickup_datetime:
+        allow_null: false
+        data_type: "timestamp"
+        description: "Trip pickup timestamp"
+        
+      # Dropoff datetime - critical field
+      dropoff_datetime:
+        allow_null: false
+        data_type: "timestamp"
+        description: "Trip dropoff timestamp"
+        
+      # Passenger count - bounded integer
+      passenger_count:
+        allow_null: false
+        data_type: "integer"
+        min: 1
+        max: 6  # NYC taxis max capacity
+        description: "Number of passengers"
+        
+      # Trip distance - positive numeric
+      trip_distance:
+        allow_null: false
+        data_type: "double"
+        min: 0.0
+        max: 500.0  # Reasonable max for NYC area
+        description: "Trip distance in miles"
+        
+      # Fare amount - positive currency
+      fare_amount:
+        allow_null: false
+        data_type: "double"
+        min: 0.0
+        max: 10000.0  # Extremely high fares flagged
+        description: "Base fare amount"
+        
+      # Total amount - positive currency
+      total_amount:
+        allow_null: false
+        data_type: "double"
+        min: 0.0
+        max: 10000.0
+        description: "Total trip cost"
+        
+      # Payment type - categorical
+      payment_type:
+        allow_null: false
+        data_type: "integer"
+        values: [1, 2, 3, 4, 5, 6]  # Valid payment type codes
+        description: "Payment method code"
+        
+      # Location IDs - reference data
+      pickup_location_id:
+        allow_null: false
+        data_type: "integer"
+        min: 1
+        max: 265  # NYC taxi zones range
+        description: "Pickup location zone ID"
+        
+      dropoff_location_id:
+        allow_null: false
+        data_type: "integer"
+        min: 1
+        max: 265
+        description: "Dropoff location zone ID"
+        
+  # Anomaly detection configuration
+  anomaly_detection:
+    # Numeric columns to monitor
+    numeric_columns:
+      - "trip_distance"
+      - "fare_amount"
+      - "total_amount"
+      - "trip_duration_minutes"
+      - "passenger_count"
+      
+    # Categorical columns to monitor for rare values
+    categorical_columns:
+      - "payment_type"
+      - "pickup_location_id"
+      - "dropoff_location_id"
+      
+    # Detection method: 'zscore' (standard deviation) or 'iqr' (interquartile range)
+    numeric_method: "iqr"  # IQR is more robust to outliers than Z-score
+    
+    # Sensitivity settings
+    zscore_threshold: 3.0  # Number of std devs for Z-score method
+    iqr_multiplier: 1.5  # Multiplier for IQR method (1.5 = standard, 3.0 = extreme)
+    
+    # Categorical anomaly settings
+    min_frequency: 0.001  # Flag rare categories below 0.1% frequency
+    
+    # Null spike detection
+    null_spike_threshold: 2.0  # Flag if null rate > 2x historical rate
+    
+    # Time series anomaly detection
+    enable_time_series: true
+    time_series_window: 7  # Days for moving average comparison
+    time_series_threshold: 2.0  # Std devs from moving average
+    
+  # Great Expectations integration
+  expectations:
+    # Enable/disable expectations framework
+    enabled: true
+    
+    # Use standard taxi trip expectations (defined in great_expectations.py)
+    use_standard_expectations: true
+    
+    # Custom expectations (beyond standard suite)
+    custom_expectations:
+      # Row count expectations
+      - expectation: "expect_table_row_count_to_be_between"
+        kwargs:
+          min_value: 1000
+          max_value: 100000000
+          
+      # Trip duration sanity check
+      - expectation: "expect_column_values_to_be_between"
+        kwargs:
+          column: "trip_duration_minutes"
+          min_value: 0.5  # 30 seconds minimum
+          max_value: 720  # 12 hours maximum
+          
+      # Average speed sanity check
+      - expectation: "expect_column_values_to_be_between"
+        kwargs:
+          column: "avg_speed_mph"
+          min_value: 0.0
+          max_value: 120.0  # Unreasonably fast if > 120 mph
+          
+      # Tip amount reasonableness
+      - expectation: "expect_column_values_to_be_between"
+        kwargs:
+          column: "tip_amount"
+          min_value: 0.0
+          max_value: 1000.0
+          strictly: false  # Allow nulls for cash payments
+          
+  # Cross-layer reconciliation
+  reconciliation:
+    # Enable/disable reconciliation checks
+    enabled: true
+    
+    # Bronze -> Silver reconciliation
+    bronze_to_silver:
+      # Row count tolerance (percentage)
+      row_count_tolerance_pct: 1.0  # Allow 1% difference (filtering may remove bad rows)
+      
+      # Key columns for integrity check
+      key_columns:
+        - "pickup_datetime"
+        - "dropoff_datetime"
+        - "pickup_location_id"
+        
+      # Aggregations to reconcile
+      aggregations:
+        - column: "trip_distance"
+          function: "sum"
+          tolerance_pct: 0.1  # Total distance should match within 0.1%
+          
+        - column: "fare_amount"
+          function: "sum"
+          tolerance_pct: 0.1  # Total fares should match within 0.1%
+          
+        - column: "passenger_count"
+          function: "sum"
+          tolerance_pct: 0.5  # Total passengers within 0.5%
+          
+    # Silver -> Gold reconciliation
+    silver_to_gold:
+      # Row count tolerance (aggregation may reduce rows)
+      row_count_tolerance_pct: 100.0  # Gold is aggregated, row counts will differ
+      
+      # Aggregations to reconcile
+      aggregations:
+        - column: "trip_distance"
+          function: "sum"
+          tolerance_pct: 0.01  # Gold totals must match Silver within 0.01%
+          
+        - column: "fare_amount"
+          function: "sum"
+          tolerance_pct: 0.01
+          
+        - column: "total_amount"
+          function: "sum"
+          tolerance_pct: 0.01
+          
+  # Metrics reporting configuration
+  metrics:
+    # Save metrics to disk
+    save_to_disk: true
+    output_directory: "logs/data_quality"
+    
+    # Export formats
+    export_json: true  # Machine-readable metrics
+    export_txt: true   # Human-readable reports
+    
+    # Metrics retention
+    retention_days: 90  # Keep metrics for 90 days
+    
+  # Error tracking configuration
+  error_tracking:
+    # Persist errors to Iceberg for long-term analysis
+    persist_to_iceberg: true
+    target_database: "data_quality"
+    target_table: "row_errors"
+    
+    # Also save errors to CSV for debugging
+    save_to_csv: true
+    csv_directory: "logs/data_quality/errors"
+    
+    # Error severity levels to track
+    severity_levels:
+      - "INFO"
+      - "WARNING"
+      - "ERROR"
+      - "CRITICAL"
 
 # ============================================================================
 # ORCHESTRATION - When things run (Airflow)

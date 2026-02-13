@@ -8,7 +8,7 @@ This platform implements a **medallion architecture** (Bronze → Silver → Gol
 
 ### Layer Responsibilities
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │ Layer    │ Responsibility      │ Technology            │
 ├──────────┼─────────────────────┼─────────────────────────┤
@@ -20,32 +20,37 @@ This platform implements a **medallion architecture** (Bronze → Silver → Gol
 │ Trino    │ Query analytics     │ SQL engine             │
 │ Superset │ Visualize           │ BI/Dashboards          │
 └─────────────────────────────────────────────────────────┘
-```
+```text
 
 ## Bronze Layer (Raw Data)
 
 ### Purpose
+
 Store **immutable, append-only** raw data exactly as received from sources.
 
 ### Technology Stack
+
 - **Storage**: Apache Iceberg tables on MinIO (S3-compatible)
 - **Ingestion**: Python scripts (config-driven)
 - **Catalog**: Hive Metastore
 
 ### Characteristics
+
 - ✅ Append-only (never delete/update)
 - ✅ Partitioned by time (year/month)
 - ✅ Stored as Parquet with Snappy compression
 - ✅ Full audit trail (`_ingestion_timestamp`, `_source_file`)
 
 ### Data Flow
-```
+
+```text
 Source (HTTP/S3/DB) → Python Ingestor → Iceberg Table (MinIO)
                             ↓
                    Hive Metastore (metadata)
 ```
 
 ### Configuration
+
 ```yaml
 bronze:
   source:
@@ -60,19 +65,22 @@ bronze:
     storage:
       format: parquet
       partition_by: [year, month]
-```
+```text
 
 ## Silver Layer (Cleaned Data)
 
 ### Purpose
+
 Transform Bronze data into **typed, validated, deduplicated** tables ready for analytics.
 
 ### Technology Stack
+
 - **Processing**: Apache Spark (distributed)
 - **Storage**: Iceberg tables on MinIO
 - **Configuration**: YAML-driven transformations
 
 ### Transformations (Config-Driven)
+
 1. **Column Renaming**: Standardize column names
 2. **Type Casting**: Convert to proper data types
 3. **Filtering**: Remove invalid records
@@ -81,13 +89,15 @@ Transform Bronze data into **typed, validated, deduplicated** tables ready for a
 6. **Quality Checks**: Validate data quality
 
 ### Data Flow
-```
+
+```text
 Bronze Layer (Iceberg) → Spark Job → Silver Layer (Iceberg)
            ↓                 ↓              ↓
     Config YAML         Transform     Quality Checks
-```
+```text
 
 ### Configuration Example
+
 ```yaml
 silver:
   transformations:
@@ -107,6 +117,7 @@ silver:
 ```
 
 ### Quality Checks
+
 ```yaml
 quality_checks:
   enabled: true
@@ -117,34 +128,39 @@ quality_checks:
       column: passenger_count
       min: 1
       max: 10
-```
+```text
 
 ## Gold Layer (Analytics)
 
 ### Purpose
+
 Create **business-focused aggregates** and **analytics-ready marts**.
 
 ### Technology Stack
+
 - **Transformation**: dbt-core (SQL models)
 - **Storage**: Iceberg tables on MinIO
 - **Query Engine**: Trino
 
 ### Modeling Approach
+
 - **Dimensional modeling** where appropriate
 - **Denormalized marts** for performance
 - **Incremental builds** for large datasets
 - **Tests** for data quality
 
 ### Data Flow
-```
+
+```text
 Silver Layer → dbt run → Gold Layer (Marts/Aggregates)
                 ↓
            SQL Models (version controlled)
-```
+```text
 
 ### Example Models
 
 #### daily_trip_stats.sql
+
 ```sql
 SELECT
     year,
@@ -159,6 +175,7 @@ GROUP BY year, month, day_of_week, pickup_location_id
 ```
 
 ### Configuration
+
 ```yaml
 gold:
   models:
@@ -170,14 +187,16 @@ gold:
             expression: count(*)
           - name: avg_fare
             expression: avg(fare_amount)
-```
+```text
 
 ## Orchestration Layer (Airflow)
 
 ### Purpose
+
 Schedule and coordinate pipeline execution. **Controls WHEN, not HOW**.
 
 ### Key Principles
+
 ✅ Airflow schedules jobs  
 ✅ Airflow manages dependencies  
 ✅ Airflow handles retries  
@@ -188,28 +207,33 @@ Schedule and coordinate pipeline execution. **Controls WHEN, not HOW**.
 ❌ Airflow does NOT replace Spark/dbt  
 
 ### DAG Structure
+
 ```python
 ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
-```
+```text
 
 ### Task Types
+
 1. **DockerOperator**: Run Python ingestors in containers
 2. **SparkSubmitOperator**: Submit Spark jobs to cluster
 3. **BashOperator**: Run dbt commands
 4. **PythonOperator**: Data quality checks
 
 ### Configuration
+
 ```yaml
 orchestration:
   dag:
     schedule_interval: "0 2 * * *"  # Daily at 2 AM
+
     retries: 2
     retry_delay_minutes: 5
-```
+```text
 
 ## Storage Layer (Iceberg + MinIO)
 
 ### Why Apache Iceberg?
+
 - **ACID transactions**: Safe concurrent writes
 - **Time travel**: Query historical data
 - **Schema evolution**: Add/modify columns safely
@@ -217,35 +241,44 @@ orchestration:
 - **Hidden partitioning**: Users don't need to know partitions
 
 ### Why MinIO?
+
 - **S3-compatible**: Drop-in replacement for AWS S3
 - **Self-hosted**: No cloud vendor lock-in
 - **High performance**: Optimized for large files
 - **Cost-effective**: Free and open-source
 
 ### Bucket Structure
+
 ```
 minio/
 ├── bronze/          # Raw data
+
 │   └── nyc-taxi/
 ├── silver/          # Cleaned data
+
 │   └── nyc-taxi/
 ├── gold/            # Analytics
+
 │   └── analytics/
 └── warehouse/       # Metadata
-```
+
+```text
 
 ## Query Layer (Trino)
 
 ### Purpose
+
 Unified SQL interface to query all layers (Bronze, Silver, Gold).
 
 ### Features
+
 - **Federated queries**: Join across catalogs
 - **MPP architecture**: Parallel query execution
 - **ANSI SQL**: Standard SQL syntax
 - **Multiple connectors**: Iceberg, Hive, PostgreSQL, etc.
 
 ### Example Queries
+
 ```sql
 -- Query Bronze (raw)
 SELECT * FROM iceberg.bronze.nyc_taxi_raw WHERE year = 2021;
@@ -264,14 +297,16 @@ SELECT
 FROM iceberg.bronze.nyc_taxi_raw b
 LEFT JOIN iceberg.silver.nyc_taxi_clean s ON b.id = s.id
 GROUP BY b.year;
-```
+```text
 
 ## Visualization Layer (Superset)
 
 ### Purpose
+
 Self-service analytics and dashboards.
 
 ### Integration
+
 - **Data source**: Trino (queries Iceberg)
 - **Semantic layer**: SQL Lab for ad-hoc queries
 - **Dashboards**: Pre-built visualizations
@@ -300,36 +335,47 @@ Self-service analytics and dashboards.
 
 **Without Config-Driven** (traditional):
 ```python
+
 # Engineer must edit Python code
+
 df = df.filter(df['trip_distance'] > 0)  # Hardcoded
+
 df = df.withColumn('duration', ...)      # Hardcoded
-```
+
+```text
 
 **With Config-Driven** (our approach):
 ```yaml
+
 # Engineer edits YAML
+
 transformations:
   filters:
     - "trip_distance > 0"  # Configurable
+
   derived_columns:
     - name: duration
       expression: "..."    # Configurable
+
 ```
 
 ## Data Quality Strategy
 
 ### Bronze Layer
+
 - **Schema validation**: Ensure expected columns exist
 - **Not null checks**: Key columns must have values
 - **Logging**: Record all ingestion attempts
 
 ### Silver Layer
+
 - **Range checks**: Values within expected bounds
 - **Referential integrity**: Foreign keys valid
 - **Deduplication**: No duplicate records
 - **Type validation**: Correct data types
 
 ### Gold Layer
+
 - **Aggregate validation**: Totals match sources
 - **Completeness**: All expected data present
 - **dbt tests**: Custom business logic tests
@@ -337,16 +383,19 @@ transformations:
 ## Monitoring & Observability
 
 ### Airflow
+
 - **DAG runs**: Success/failure rates
 - **Task duration**: Identify slow tasks
 - **Retry patterns**: Common failure points
 
 ### Spark
+
 - **Job metrics**: Records processed, duration
 - **Resource usage**: CPU, memory, I/O
 - **Shuffle metrics**: Data movement
 
 ### Trino
+
 - **Query performance**: Execution time
 - **Data scanned**: Bytes read
 - **Cache hit rates**: Performance optimization
@@ -354,15 +403,18 @@ transformations:
 ## Security Considerations
 
 ### Access Control
+
 - **MinIO**: Bucket policies, IAM
 - **Trino**: Role-based access control (RBAC)
 - **Airflow**: User authentication, RBAC
 
 ### Data Encryption
+
 - **At rest**: MinIO encryption
 - **In transit**: TLS/SSL for all connections
 
 ### Secrets Management
+
 - **Airflow**: Connections, Variables
 - **Kubernetes**: Secrets (production)
 - **Environment variables**: Docker Compose
@@ -370,11 +422,13 @@ transformations:
 ## Scalability
 
 ### Horizontal Scaling
+
 - **Spark workers**: Add more workers for larger datasets
 - **Trino workers**: Distribute query load
 - **Airflow workers**: Parallel task execution
 
 ### Vertical Scaling
+
 - **Memory**: Increase for large Spark jobs
 - **CPU**: More cores for parallel processing
 - **Storage**: Expand MinIO capacity
@@ -382,11 +436,13 @@ transformations:
 ## Disaster Recovery
 
 ### Backup Strategy
+
 - **Iceberg snapshots**: Point-in-time recovery
 - **Metastore backup**: Hive Metastore database
 - **Config backup**: Git repository
 
 ### Recovery Procedures
+
 1. Restore Metastore from backup
 2. Point Iceberg to previous snapshot
 3. Re-run failed pipelines from Airflow
@@ -394,6 +450,7 @@ transformations:
 ## Future Enhancements
 
 ### Potential Additions
+
 - **Streaming**: Kafka/Redpanda for real-time data
 - **ML Integration**: MLflow for model tracking
 - **Data Catalog**: Amundsen or DataHub

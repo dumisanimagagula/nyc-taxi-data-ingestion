@@ -1,0 +1,92 @@
+version: '3.8'
+
+# Docker Compose Override for STAGING Environment
+# Usage: docker-compose -f docker-compose.yaml -f docker-compose.override.staging.yaml up
+
+services:
+  # Staging-specific configurations
+  
+  # MinIO - Enable TLS in staging (if certificates available)
+  minio:
+    environment:
+      MINIO_SERVER_URL: https://minio.staging.local:9000
+      MINIO_BROWSER_REDIRECT_URL: https://console.staging.local:9001
+    # Uncomment when certificates are available
+    # volumes:
+    #   - ./certs/minio.crt:/root/.minio/certs/public.crt:ro
+    #   - ./certs/minio.key:/root/.minio/certs/private.key:ro
+
+  # Spark - Production-like worker count
+  spark-worker-1:
+    environment:
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-4}
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-8g}
+
+  spark-worker-2:
+    environment:
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-4}
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-8g}
+
+  # Trino - Staging-specific catalog configurations
+  trino:
+    environment:
+      TRINO_ENVIRONMENT: staging
+      TRINO_DISCOVERY_URI: http://trino:8080
+
+  # Superset - Production-like settings
+  superset:
+    environment:
+      SUPERSET_ENV: staging
+      SUPERSET_LOAD_EXAMPLES: 'false'
+      TALISMAN_ENABLED: 'true'
+    # Disable debug mode
+    command: >
+      sh -c "
+      superset db upgrade &&
+      superset fab create-admin --username ${SUPERSET_ADMIN_USERNAME:-admin} --firstname Admin --lastname User --email admin@superset.com --password ${SUPERSET_ADMIN_PASSWORD:-admin} || true &&
+      superset init &&
+      gunicorn --bind 0.0.0.0:8088 --workers 4 --timeout 120 --limit-request-line 0 --limit-request-field_size 0 'superset.app:create_app()'
+      "
+
+  # Airflow - Reduce logging, production-like settings
+  airflow-webserver:
+    environment:
+      AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+      AIRFLOW__CORE__PARALLELISM: 16
+      AIRFLOW__CORE__DAG_CONCURRENCY: 8
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'false'
+      AIRFLOW__WEBSERVER__EXPOSE_HOSTNAME: 'false'
+      AIRFLOW__WEBSERVER__EXPOSE_STACKTRACE: 'false'
+
+  airflow-scheduler:
+    environment:
+      AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+      AIRFLOW__SCHEDULER__MAX_THREADS: 2
+
+  # Database backups enabled
+  metastore-db:
+    volumes:
+      - metastore-db:/var/lib/postgresql/data
+      - ./backups/metastore:/backups
+
+  superset-db:
+    volumes:
+      - superset-db:/var/lib/postgresql/data
+      - ./backups/superset:/backups
+
+  airflow-db:
+    volumes:
+      - airflow-db:/var/lib/postgresql/data
+      - ./backups/airflow:/backups
+
+  # Ingestor - Production-like settings
+  ingestor:
+    environment:
+      LOG_LEVEL: INFO
+      PYTHONUNBUFFERED: '1'
+
+  # dbt - Production-like settings
+  dbt:
+    environment:
+      DBT_ENV: staging
+      DBT_LOG_LEVEL: info

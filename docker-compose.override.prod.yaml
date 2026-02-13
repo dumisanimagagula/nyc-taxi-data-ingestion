@@ -1,0 +1,182 @@
+version: '3.8'
+
+# Docker Compose Override for PRODUCTION Environment
+# Usage: docker-compose -f docker-compose.yaml -f docker-compose.override.prod.yaml up
+
+services:
+  # Production configurations - Maximum security and performance
+  
+  # MinIO - Production TLS enabled
+  minio:
+    environment:
+      MINIO_SERVER_URL: https://minio.production.local:9000
+      MINIO_BROWSER_REDIRECT_URL: https://console.production.local:9001
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+      MINIO_PROMETHEUS_URL: http://prometheus:9090
+    # Mount production certificates
+    volumes:
+      - minio-data:/data
+      - ./certs/prod/minio.crt:/root/.minio/certs/public.crt:ro
+      - ./certs/prod/minio.key:/root/.minio/certs/private.key:ro
+
+  # Spark - Maximum resources
+  spark-master:
+    environment:
+      SPARK_DAEMON_MEMORY: 4g
+      SPARK_MASTER_OPTS: "-Dspark.deploy.defaultCores=8"
+
+  spark-worker-1:
+    environment:
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-8}
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-16g}
+      SPARK_DAEMON_MEMORY: 2g
+
+  spark-worker-2:
+    environment:
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-8}
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-16g}
+      SPARK_DAEMON_MEMORY: 2g
+
+  # Trino - Production optimizations
+  trino:
+    environment:
+      TRINO_ENVIRONMENT: production
+      TRINO_DISCOVERY_URI: http://trino:8080
+      TRINO_MAX_MEMORY_PER_NODE: 8GB
+    volumes:
+      - ./trino/etc:/etc/trino
+      - ./trino/catalog:/etc/trino/catalog
+
+  # Superset - Production security enabled
+  superset:
+    environment:
+      SUPERSET_ENV: production
+      SUPERSET_LOAD_EXAMPLES: 'false'
+      TALISMAN_ENABLED: 'true'
+      WTF_CSRF_ENABLED: 'true'
+      SESSION_COOKIE_SECURE: 'true'
+      SESSION_COOKIE_HTTPONLY: 'true'
+      SESSION_COOKIE_SAMESITE: 'Lax'
+    # Production-ready Gunicorn config
+    command: >
+      sh -c "
+      superset db upgrade &&
+      superset fab create-admin --username ${SUPERSET_ADMIN_USERNAME:-admin} --firstname Admin --lastname User --email admin@superset.com --password ${SUPERSET_ADMIN_PASSWORD:-admin} || true &&
+      superset init &&
+      gunicorn --bind 0.0.0.0:8088 
+               --workers 8 
+               --worker-class gevent 
+               --timeout 300 
+               --keep-alive 60 
+               --max-requests 1000 
+               --max-requests-jitter 50 
+               --limit-request-line 0 
+               --limit-request-field_size 0 
+               --access-logfile /app/superset_home/logs/access.log 
+               --error-logfile /app/superset_home/logs/error.log 
+               'superset.app:create_app()'
+      "
+
+  # Airflow - Production configuration
+  airflow-webserver:
+    environment:
+      AIRFLOW__LOGGING__LOGGING_LEVEL: WARNING
+      AIRFLOW__CORE__PARALLELISM: 32
+      AIRFLOW__CORE__DAG_CONCURRENCY: 16
+      AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: 8
+      AIRFLOW__WEBSERVER__WORKERS: 4
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'false'
+      AIRFLOW__WEBSERVER__EXPOSE_HOSTNAME: 'false'
+      AIRFLOW__WEBSERVER__EXPOSE_STACKTRACE: 'false'
+      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: 'true'
+
+  airflow-scheduler:
+    environment:
+      AIRFLOW__LOGGING__LOGGING_LEVEL: WARNING
+      AIRFLOW__SCHEDULER__MAX_THREADS: 4
+      AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 30
+      AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: 300
+
+  # PostgreSQL - Production backups and monitoring
+  metastore-db:
+    environment:
+      POSTGRES_MAX_CONNECTIONS: 200
+      POSTGRES_SHARED_BUFFERS: 512MB
+    volumes:
+      - metastore-db:/var/lib/postgresql/data
+      - ./backups/metastore:/backups
+      - ./pg_restore:/pg_restore
+
+  superset-db:
+    environment:
+      POSTGRES_MAX_CONNECTIONS: 200
+      POSTGRES_SHARED_BUFFERS: 512MB
+    volumes:
+      - superset-db:/var/lib/postgresql/data
+      - ./backups/superset:/backups
+      - ./pg_restore:/pg_restore
+
+  airflow-db:
+    environment:
+      POSTGRES_MAX_CONNECTIONS: 200
+      POSTGRES_SHARED_BUFFERS: 512MB
+    volumes:
+      - airflow-db:/var/lib/postgresql/data
+      - ./backups/airflow:/backups
+      - ./pg_restore:/pg_restore
+
+  # Ingestor - Production logging
+  ingestor:
+    environment:
+      LOG_LEVEL: WARNING
+      PYTHONUNBUFFERED: '1'
+      PYTHONOPTIMIZE: '2'
+
+  # dbt - Production mode
+  dbt:
+    environment:
+      DBT_ENV: production
+      DBT_LOG_LEVEL: warn
+      DBT_WARN_ERROR: 'true'
+
+# Optional: Add monitoring stack for production
+# Uncomment to enable
+#
+#   prometheus:
+#     image: prom/prometheus:latest
+#     container_name: lakehouse-prometheus
+#     ports:
+#       - "${PROMETHEUS_PORT:-9090}:9090"
+#     volumes:
+#       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#       - prometheus-data:/prometheus
+#     command:
+#       - '--config.file=/etc/prometheus/prometheus.yml'
+#       - '--storage.tsdb.path=/prometheus'
+#       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+#       - '--web.console.templates=/usr/share/prometheus/consoles'
+#     restart: unless-stopped
+#     networks:
+#       - lakehouse-net
+#
+#   grafana:
+#     image: grafana/grafana:latest
+#     container_name: lakehouse-grafana
+#     ports:
+#       - "${GRAFANA_PORT:-3000}:3000"
+#     environment:
+#       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+#       GF_INSTALL_PLUGINS: grafana-piechart-panel
+#     volumes:
+#       - grafana-data:/var/lib/grafana
+#       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+#       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+#     restart: unless-stopped
+#     depends_on:
+#       - prometheus
+#     networks:
+#       - lakehouse-net
+#
+# volumes:
+#   prometheus-data:
+#   grafana-data:

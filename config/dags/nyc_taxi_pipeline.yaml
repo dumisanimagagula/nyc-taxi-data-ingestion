@@ -1,0 +1,161 @@
+# NYC Taxi Medallion Pipeline Configuration
+# ==========================================
+# This configuration file is used by the DAG factory to generate an Airflow DAG
+
+dag:
+  id: nyc_taxi_medallion_pipeline
+  description: "NYC Taxi data lakehouse pipeline with medallion architecture"
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  start_date: "2024-01-01"
+  catchup: false
+  max_active_runs: 1
+  tags:
+    - nyc-taxi
+    - medallion
+    - lakehouse
+    - production
+
+default_args:
+  owner: data-engineering
+  depends_on_past: false
+  email_on_failure: true
+  email_on_retry: false
+  email:
+    - data-engineering@company.com
+  retries: 2
+  retry_delay_minutes: 5
+  timeout_hours: 2
+
+# Spark configuration
+spark:
+  conn_id: spark_default
+  packages:
+    - org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.2
+    - org.apache.hadoop:hadoop-aws:3.3.4
+    - com.amazonaws:aws-java-sdk-bundle:1.12.262
+  
+  conf:
+    spark.sql.catalog.lakehouse: org.apache.iceberg.spark.SparkCatalog
+    spark.sql.catalog.lakehouse.type: hive
+    spark.sql.extensions: org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+    spark.sql.adaptive.enabled: "true"
+    spark.sql.adaptive.coalescePartitions.enabled: "true"
+    spark.hadoop.fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+    spark.hadoop.fs.s3a.path.style.access: "true"
+
+# Pipeline configuration path
+pipeline_config_path: /app/config/pipelines/lakehouse_config.yaml
+
+# Health checks to perform before execution
+health_checks:
+  spark_master: true
+  metastore: true
+  storage: true
+
+# Bronze Layer Configuration
+layers:
+  bronze:
+    datasets:
+      - name: yellow_taxi
+        enabled: true
+        priority: 1
+        source_type: parquet
+        description: "Yellow taxi trip records"
+      
+      - name: green_taxi
+        enabled: true
+        priority: 2
+        source_type: parquet
+        description: "Green taxi trip records"
+      
+      - name: taxi_zones
+        enabled: true
+        priority: 0
+        source_type: csv
+        description: "NYC taxi zone reference data"
+      
+      - name: fhv_taxi
+        enabled: false
+        priority: 3
+        source_type: parquet
+        description: "For-hire vehicle trip records"
+  
+  # Silver Layer Configuration
+  silver:
+    application: /opt/spark/jobs/bronze_to_silver.py
+    datasets:
+      - name: yellow_taxi
+        enabled: true
+        transformations:
+          - clean_data
+          - validate_schema
+          - enrich_zones
+      
+      - name: green_taxi
+        enabled: true
+        transformations:
+          - clean_data
+          - validate_schema
+          - enrich_zones
+      
+      - name: taxi_zones
+        enabled: true
+        transformations:
+          - validate_schema
+  
+  # Gold Layer Configuration
+  gold:
+    application: /opt/spark/jobs/build_gold_layer.py
+    models:
+      - daily_trip_stats
+      - hourly_location_analysis
+      - revenue_by_payment_type
+
+# Data Quality Configuration
+data_quality:
+  enabled: true
+  application: /opt/spark/jobs/run_data_quality.py
+  fail_on_error: true
+  checks:
+    - null_checks
+    - range_checks
+    - schema_validation
+    - referential_integrity
+
+# Lineage Tracking
+lineage:
+  enabled: true
+  track_datasets: true
+  track_transformations: true
+  track_quality_checks: true
+
+# Monitoring & Alerting
+monitoring:
+  sla_hours: 4
+  alert_on_sla_miss: true
+  alert_channels:
+    - email
+    - slack
+  
+  metrics:
+    - duration
+    - row_counts
+    - data_quality_score
+
+# Environment-specific overrides
+environments:
+  dev:
+    data_quality:
+      fail_on_error: false
+    schedule: "0 */6 * * *"  # Every 6 hours
+  
+  staging:
+    data_quality:
+      fail_on_error: true
+    schedule: "0 4 * * *"  # Daily at 4 AM
+  
+  prod:
+    data_quality:
+      fail_on_error: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    max_active_runs: 1

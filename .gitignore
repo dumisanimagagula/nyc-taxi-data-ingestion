@@ -179,3 +179,5 @@ gold/target/
 gold/dbt_packages/
 
 *.parquet
+
+.github/

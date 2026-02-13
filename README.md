@@ -9,14 +9,15 @@
 A **complete open-source data platform** that demonstrates modern data engineering best practices:
 
 - **Medallion Architecture**: Bronze (raw) → Silver (clean) → Gold (aggregated)
-- **Config-Driven**: All transformations defined in YAML
+- **Config-Driven**: All transformations and orchestration defined in YAML
+- **Production-Ready Orchestration**: SparkSubmitOperator with health checks, dynamic task generation, and environment parameterization
 - **Cloud-Native**: Runs on Docker, production-ready for Kubernetes
 - **Open Standards**: Apache Iceberg, Spark, dbt, Trino
-- **Orchestrated**: Airflow controls when things run
+- **Automated Quality**: Data quality framework with lineage tracking and testing coverage
 
 ## 🏛️ Architecture
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │                     DATA SOURCES                             │
 │  NYC Taxi Data | APIs | Files | Databases                    │
@@ -64,13 +65,16 @@ A **complete open-source data platform** that demonstrates modern data engineeri
         │  • Manages dependencies                     │
         │  • Retry logic & monitoring                 │
         └─────────────────────────────────────────────┘
-```
+```text
 
 ## ✨ Key Features
 
 ### 🔧 **Config-Driven Everything**
+
 ```yaml
+
 # config/pipelines/lakehouse_config.yaml
+
 bronze:
   source:
     type: http
@@ -91,7 +95,7 @@ gold:
     - name: daily_trip_stats
       aggregations:
         group_by: [year, month, location]
-```
+```text
 
 ### 🎯 **Separation of Concerns**
 
@@ -116,6 +120,7 @@ gold:
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Docker Desktop (Windows) or Docker + Docker Compose (Linux/Mac)
 - 8GB+ RAM recommended
 - 20GB+ disk space
@@ -123,26 +128,33 @@ gold:
 ### 1. Clone and Start
 
 ```powershell
+
 # Clone repository
+
 git clone <repo-url>
 cd nyc-taxi-data-ingestion
 
 # Start all services
+
 docker compose up -d
 
 # Wait ~60 seconds for services to initialize
+
 ```
 
 ### 2. Initialize Platform
 
 ```powershell
+
 # Run setup script (Windows)
+
 .\scripts\setup_lakehouse.ps1
 
 # Or Linux/Mac
+
 chmod +x scripts/setup_lakehouse.sh
 ./scripts/setup_lakehouse.sh
-```
+```text
 
 ### 3. Access UIs
 
@@ -163,15 +175,19 @@ chmod +x scripts/setup_lakehouse.sh
 
 **Option 2: Manual Execution**
 ```powershell
+
 # Bronze layer
+
 docker exec lakehouse-ingestor python /app/bronze/ingestors/ingest_to_iceberg.py --config /app/config/pipelines/lakehouse_config.yaml
 
 # Silver layer
+
 docker exec lakehouse-spark-master spark-submit /opt/spark/jobs/bronze_to_silver.py
 
 # Gold layer
+
 docker exec lakehouse-dbt dbt run --profiles-dir /usr/app
-```
+```text
 
 ### 5. Query Data
 
@@ -186,7 +202,7 @@ SELECT * FROM iceberg.silver.nyc_taxi_clean LIMIT 10;
 
 -- Gold layer (analytics)
 SELECT * FROM iceberg.gold.daily_trip_stats LIMIT 10;
-```
+```text
 
 ## 📁 Project Structure
 
@@ -194,46 +210,65 @@ SELECT * FROM iceberg.gold.daily_trip_stats LIMIT 10;
 nyc-taxi-data-ingestion/
 │
 ├── config/                          # All configuration (YAML only!)
+
 │   ├── pipelines/
 │   │   └── lakehouse_config.yaml   # Master config for entire platform
+
 │   └── sources/                     # Additional source configs
+
 │
 ├── bronze/                          # Raw data ingestion
+
 │   └── ingestors/
 │       └── ingest_to_iceberg.py    # Config-driven ingestion to Iceberg
+
 │
 ├── silver/                          # Data cleaning & validation
+
 │   └── jobs/
 │       └── bronze_to_silver.py     # Config-driven Spark transformations
+
 │
 ├── gold/                            # Analytics models
+
 │   ├── models/
 │   │   └── analytics/              # dbt models (SQL)
+
 │   ├── dbt_project.yml
 │   └── profiles.yml
 │
 ├── airflow/                         # Orchestration
+
 │   ├── dags/
 │   │   └── nyc_taxi_medallion_dag.py  # Main pipeline DAG
+
 │   └── config/
 │
 ├── trino/                           # Query engine config
+
 │   └── etc/
 │       └── catalog/
 │           └── iceberg.properties
 │
 ├── spark/                           # Spark jobs & JARs
+
 │   ├── jobs/
 │   └── jars/
 │
 ├── scripts/                         # Setup & utilities
+
 │   ├── setup_lakehouse.ps1         # Windows setup
+
 │   └── setup_lakehouse.sh          # Linux/Mac setup
+
 │
 ├── docker-compose.yaml              # Full stack definition
+
 ├── requirements.txt                 # Python dependencies
+
 └── README.md                        # This file
-```
+
+```text
 
 ## 🎛️ Configuration Guide
 
@@ -242,10 +277,12 @@ nyc-taxi-data-ingestion/
 This **single file** controls the entire pipeline. No code changes needed!
 
 #### **Bronze Layer Config**
+
 ```yaml
 bronze:
   source:
     type: http  # or: s3, postgres, api
+
     params:
       year: 2021
       month: 1
@@ -257,38 +294,45 @@ bronze:
     storage:
       format: parquet
       partition_by: [year, month]
-```
+```text
 
 #### **Silver Layer Config**
+
 ```yaml
 silver:
   transformations:
     # Rename columns
+
     rename_columns:
       tpep_pickup_datetime: pickup_datetime
       
     # Type casting
+
     cast_columns:
       fare_amount: decimal(10,2)
       
     # Filters
+
     filters:
       - "trip_distance > 0"
       - "fare_amount > 0"
       
     # Deduplication
+
     dedupe:
       enabled: true
       partition_by: [year, month]
       order_by: ["pickup_datetime DESC"]
       
     # Derived columns
+
     derived_columns:
       - name: trip_duration_minutes
         expression: "(unix_timestamp(dropoff_datetime) - unix_timestamp(pickup_datetime)) / 60"
-```
+```text
 
 #### **Gold Layer Config**
+
 ```yaml
 gold:
   models:
@@ -328,10 +372,11 @@ gold:
 ### Airflow DAG Structure
 
 ```python
+
 # airflow/dags/nyc_taxi_medallion_dag.py
 
 ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
-```
+```text
 
 **Linear execution**:
 1. Python ingestor writes to Bronze (Iceberg)
@@ -344,40 +389,48 @@ ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
 ### Change Data to Ingest
 
 ```yaml
+
 # config/pipelines/lakehouse_config.yaml
 
 bronze:
   source:
     params:
       year: 2022        # ← Change this
+
       month: 6          # ← Change this
+
       taxi_type: green  # ← Or this (yellow, green, fhv)
-```
+
+```text
 
 Then trigger the DAG in Airflow.
 
 ### Add a New Transformation
 
 ```yaml
+
 # config/pipelines/lakehouse_config.yaml
 
 silver:
   transformations:
     derived_columns:
       - name: is_weekend         # ← New column
+
         expression: "dayofweek(pickup_datetime) IN (1, 7)"
-```
+```text
 
 Re-run the Silver layer task.
 
 ### Add a New Gold Model
 
 ```yaml
+
 # config/pipelines/lakehouse_config.yaml
 
 gold:
   models:
     - name: weekend_vs_weekday_stats  # ← New model
+
       aggregations:
         group_by: [year, month, is_weekend]
         measures:
@@ -390,17 +443,20 @@ Re-run the Gold layer task, or add a new dbt SQL file.
 ## 📊 Data Quality
 
 ### Bronze Layer
+
 - Not null checks on key columns
 - Positive value validation
 - Schema consistency
 
 ### Silver Layer
+
 - Range checks (e.g., passenger_count 1-10)
 - Referential integrity
 - Deduplication
 - Type validation
 
 ### Gold Layer
+
 - Aggregate validation
 - Completeness checks
 - Business logic tests (dbt tests)
@@ -410,14 +466,17 @@ Re-run the Gold layer task, or add a new dbt SQL file.
 ### Using Trino CLI
 
 ```bash
+
 # Connect to Trino
+
 docker exec -it lakehouse-trino trino
 
 # Query any layer
+
 SELECT * FROM iceberg.bronze.nyc_taxi_raw WHERE year = 2021 LIMIT 10;
 SELECT * FROM iceberg.silver.nyc_taxi_clean WHERE trip_distance > 10;
 SELECT * FROM iceberg.gold.daily_trip_stats ORDER BY total_revenue DESC;
-```
+```text
 
 ### Using Python
 
@@ -434,7 +493,7 @@ conn = connect(
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM daily_trip_stats LIMIT 10")
 rows = cursor.fetchall()
-```
+```text
 
 ## 🚀 Production Deployment
 
@@ -458,12 +517,15 @@ This platform is designed to run on Kubernetes. Key considerations:
 ## 🧪 Testing
 
 ```powershell
+
 # Run tests
+
 docker exec lakehouse-ingestor pytest /app/tests/
 
 # Test data quality
+
 docker exec lakehouse-dbt dbt test --profiles-dir /usr/app
-```
+```text
 
 ## 📚 Documentation
 
@@ -497,38 +559,65 @@ MIT License - See LICENSE file
 
 ```
 ├── src/                          # Source code
+
 │   ├── ingest_nyc_taxi_data.py  # Main ingestion script
+
 │   ├── ingest_zones.py          # Zones ingestion script
+
 │   └── config_loader.py         # Configuration parser
+
 ├── config.examples/             # Example configurations
+
 │   ├── batch_2021_q1.yaml       # Q1 2021 batch
+
 │   ├── batch_2021_full_year.yaml # Full year 2021
+
 │   ├── batch_2025_full_year.yaml # Full year 2025
+
 │   ├── with_zones.yaml          # Single month + zones
+
 │   └── zones_only.yaml          # Zones only
+
 ├── docs/                        # Documentation
+
 │   ├── BATCH_INGESTION.md       # Batch processing guide
+
 │   ├── CONFIGURATION.md         # Configuration reference
+
 │   ├── CONFIG_EXAMPLES.md       # Config examples
+
 │   ├── ZONES_README.md          # Zones data guide
+
 │   └── QUICK_REFERENCE.md       # Command reference
+
 ├── scripts/                     # Utility scripts
+
 │   ├── verify_zones.py          # Verify zones data
+
 │   ├── example_zones_join.py    # Example queries
+
 │   └── test_config_driven.py    # Integration test
+
 ├── docker-init-scripts/         # PostgreSQL init scripts
+
 ├── config.yaml                  # Default configuration
+
 ├── docker-compose.yaml          # Docker orchestration
+
 ├── Dockerfile                   # Production image
+
 └── requirements.txt             # Python dependencies
-```
+
+```text
 
 ## Configuration
 
 ### Basic Configuration
 
 ```yaml
+
 # Data source
+
 data_source:
   year: 2021
   month: 1
@@ -536,22 +625,25 @@ data_source:
   taxi_type: yellow
 
 # Database
+
 database:
   connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
   table_name: "yellow_tripdata"
 
 # Ingestion
+
 ingestion:
   chunk_size: 250000
   drop_existing: false
   if_exists: "replace"
 
 # Zones (optional)
+
 zones:
   enabled: true
   table_name: "zones"
   create_index: true
-```
+```text
 
 ### Batch Ingestion
 
@@ -567,33 +659,38 @@ data_sources:
     month: 2
   - year: 2021
     month: 3
-```
+```text
 
 See [docs/CONFIG_EXAMPLES.md](docs/CONFIG_EXAMPLES.md) for more examples.
 
 ## Usage Examples
 
 ### Ingest Single Month
+
 ```bash
 docker compose run --rm ingestor
 ```
 
 ### Ingest Q1 2021
+
 ```bash
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2021_q1.yaml ingestor
-```
+```text
 
 ### Ingest Full Year 2025
+
 ```bash
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2025_full_year.yaml ingestor
-```
+```text
 
 ### Ingest Zones Only
+
 ```bash
 docker compose run --rm -e CONFIG_PATH=config.examples/zones_only.yaml ingestor python src/ingest_zones.py
-```
+```text
 
 ### Verify Zones Data
+
 ```bash
 docker compose run --rm ingestor python scripts/verify_zones.py
 ```
@@ -637,36 +734,47 @@ docker compose run --rm ingestor python scripts/verify_zones.py
 ## Development
 
 ### Local Setup
+
 ```bash
+
 # Create virtual environment
+
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # Install dependencies
+
 pip install -r requirements.txt
 
 # Run locally (update connection string in config.yaml)
+
 python src/ingest_nyc_taxi_data.py --config config.yaml
-```
+```text
 
 ### Rebuild Image
+
 ```bash
 docker compose build ingestor
-```
+```text
 
 ## Troubleshooting
 
 ### Schema Mismatch
+
 If ingesting different years with different schemas:
 ```bash
+
 # Clean database
+
 docker compose down -v
 
 # Run ingestion
+
 docker compose run --rm -e CONFIG_PATH=your_config.yaml ingestor
-```
+```text
 
 ### Check Logs
+
 ```bash
 docker compose logs pgdatabase
 docker compose logs ingestor

@@ -1,0 +1,16 @@
+{
+  "AIRFLOW_ENV": "dev",
+  "CONFIG_BASE_PATH": "/app/config",
+  "PIPELINE_CONFIG_PATH": "/app/config/pipelines/lakehouse_config.yaml",
+  "DATASETS_CONFIG_PATH": "/app/config/datasets/datasets.yaml",
+  "DAG_CONFIG_DIR": "/app/config/dags",
+  "SPARK_MASTER_URL": "spark://spark-master:7077",
+  "HIVE_METASTORE_URI": "thrift://hive-metastore:9083",
+  "MINIO_ENDPOINT": "http://minio:9000",
+  "S3_ACCESS_KEY": "minio",
+  "S3_SECRET_KEY": "minio123",
+  "ENABLE_DATA_QUALITY": false,
+  "ENABLE_LINEAGE": false,
+  "ENABLE_DAG_FACTORY": true,
+  "ALERT_EMAILS": "dev-team@company.com"
+}

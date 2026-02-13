@@ -1,0 +1,57 @@
+# ============================================================================
+# LAKEHOUSE PLATFORM - STAGING ENVIRONMENT OVERRIDES
+# ============================================================================
+# This file contains staging-specific configuration overrides.
+# Merged with base lakehouse_config.yaml at runtime.
+# ============================================================================
+
+version: "v1.0"
+
+# Override pipeline settings for staging
+pipeline:
+  environment: "staging"
+  schedule: "0 3 * * *"  # Run at 3 AM in staging
+  enabled: true
+  owner: "data-engineering-staging@company.com"
+
+# Staging-specific infrastructure (point to staging services)
+infrastructure:
+  s3:
+    endpoint: "${STAGING_S3_ENDPOINT}"
+    access_key: "${STAGING_S3_ACCESS_KEY}"
+    secret_key: "${STAGING_S3_SECRET_KEY}"
+  
+  metastore:
+    uri: "${STAGING_METASTORE_URI}"
+  
+  spark:
+    master: "spark://staging-spark-master:7077"
+    executor_memory: "2g"
+    driver_memory: "1g"
+
+# Staging ingestion settings
+bronze:
+  ingestion:
+    chunk_size: 50000
+    mode: "append"  # Test append mode before production
+  
+  target:
+    s3:
+      bucket: "staging-bronze"
+
+# Staging quality checks (strict but non-blocking)
+silver:
+  quality_checks:
+    enabled: true
+    fail_on_error: false  # Log errors but don't fail
+  
+  target:
+    s3:
+      bucket: "staging-silver"
+
+# Staging gold layer
+gold:
+  models:
+    - name: "daily_trip_stats"
+      target:
+        database: "staging_gold"

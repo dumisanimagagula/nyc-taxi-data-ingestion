@@ -1,0 +1,64 @@
+version: '3.8'
+
+# Docker Compose Override - Health Check Fix
+# This override fixes the hive-metastore health check issue by using a working command
+# It ensures dependent services can start properly
+
+services:
+  # Fix hive-metastore health check (nc not available, use lsof instead)
+  hive-metastore:
+    healthcheck:
+      # Use lsof to check if port 9083 is listening (more reliable than nc)
+      test: ["CMD-SHELL", "lsof -i :9083 || exit 1"]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-180s}  # Longer startup time for Hive
+
+  # Update Spark Master to use flexible health check
+  spark-master:
+    depends_on:
+      hive-metastore:
+        condition: service_started  # Changed from service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8080 > /dev/null || exit 1"]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+
+  # Spark Workers
+  spark-worker-1:
+    depends_on:
+      spark-master:
+        condition: service_started
+
+  spark-worker-2:
+    depends_on:
+      spark-master:
+        condition: service_started
+
+  # Update other services to use service_started instead of service_healthy
+  superset:
+    depends_on:
+      metastore-db:
+        condition: service_started
+      hive-metastore:
+        condition: service_started
+
+  trino:
+    depends_on:
+      hive-metastore:
+        condition: service_started
+
+  dbt:
+    depends_on:
+      hive-metastore:
+        condition: service_started
+
+  ingestor:
+    depends_on:
+      metastore-db:
+        condition: service_started
+      hive-metastore:
+        condition: service_started

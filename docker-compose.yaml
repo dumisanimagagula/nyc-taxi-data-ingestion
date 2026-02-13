@@ -27,18 +27,32 @@ services:
     container_name: lakehouse-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # Web Console
+      - "${MINIO_API_PORT:-9000}:9000"   # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"   # Web Console
     volumes:
       - minio-data:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${MINIO_CPU_LIMIT:-1.0}
+          memory: ${MINIO_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${MINIO_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
 
@@ -51,13 +65,17 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set myminio http://minio:9000 minio minio123;
+      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minio} ${MINIO_ROOT_PASSWORD:-minio123};
       mc mb --ignore-existing myminio/lakehouse;
       mc mb --ignore-existing myminio/bronze;
       mc mb --ignore-existing myminio/silver;
       mc mb --ignore-existing myminio/gold;
       mc mb --ignore-existing myminio/warehouse;
       mc anonymous set download myminio/lakehouse;
+      mc anonymous set download myminio/bronze;
+      mc anonymous set download myminio/silver;
+      mc anonymous set download myminio/gold;
+      mc anonymous set download myminio/warehouse;
       exit 0;
       "
     networks:
@@ -70,18 +88,32 @@ services:
     image: postgres:15
     container_name: lakehouse-metastore-db
     environment:
-      POSTGRES_USER: hive
-      POSTGRES_PASSWORD: hive
-      POSTGRES_DB: metastore
+      POSTGRES_USER: ${METASTORE_DB_USER:-hive}
+      POSTGRES_PASSWORD: ${METASTORE_DB_PASSWORD:-hive}
+      POSTGRES_DB: ${METASTORE_DB_NAME:-metastore}
       POSTGRES_HOST_AUTH_METHOD: md5
       POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=md5"
     volumes:
       - metastore-db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hive -d metastore"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${POSTGRES_CPU_LIMIT:-1.0}
+          memory: ${POSTGRES_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${POSTGRES_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
 
@@ -97,12 +129,31 @@ services:
       SERVICE_OPTS: "-Xmx2g -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://metastore-db:5432/metastore -Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=hive"
     entrypoint: ["/bin/bash", "/opt/hive/conf/start-hive-metastore.sh"]
     ports:
-      - "9083:9083"
+      - "${METASTORE_PORT:-9083}:9083"
     volumes:
       - ./docker-init-scripts/start-hive-metastore.sh:/opt/hive/conf/start-hive-metastore.sh:ro
       - ./docker-init-scripts/hive-jars/hadoop-aws-3.1.0.jar:/opt/hadoop/share/hadoop/common/lib/hadoop-aws-3.1.0.jar
       - ./docker-init-scripts/hive-jars/aws-java-sdk-bundle-1.11.375.jar:/opt/hadoop/share/hadoop/common/lib/aws-java-sdk-bundle-1.11.375.jar
       - ./docker-init-scripts/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9083 || exit 1"]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${POSTGRES_CPU_LIMIT:-1.0}
+          memory: ${POSTGRES_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${POSTGRES_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
 
@@ -113,15 +164,39 @@ services:
     image: apache/spark:3.5.0
     container_name: lakehouse-spark-master
     user: root
+    depends_on:
+      hive-metastore:
+        condition: service_healthy
     ports:
-      - "7077:7077"   # Spark Master
-      - "8080:8080"   # Spark Master UI
+      - "${SPARK_MASTER_PORT:-7077}:7077"   # Spark Master
+      - "${SPARK_MASTER_UI_PORT:-8080}:8080"   # Spark Master UI
     volumes:
       - ./silver/jobs:/opt/spark/jobs
+      - ./silver:/app/silver  # Add full silver package for imports
+      - ./src:/app/src  # Add src package for config_loader etc.
       - ./gold/jobs:/opt/spark/gold-jobs
       - ./config:/app/config
       - spark-warehouse:/opt/spark/warehouse
       - spark-checkpoints:/opt/spark/checkpoints
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${SPARK_MASTER_CPU_LIMIT:-2.0}
+          memory: ${SPARK_MASTER_MEM_LIMIT:-4g}
+        reservations:
+          memory: ${SPARK_MASTER_MEM_RESERVATION:-2g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
     entrypoint: ["/bin/bash", "-c"]
@@ -134,10 +209,24 @@ services:
     container_name: lakehouse-spark-worker-1
     user: root
     depends_on:
-      - spark-master
+      spark-master:
+        condition: service_healthy
     volumes:
       - ./silver/jobs:/opt/spark/jobs
       - spark-warehouse:/opt/spark/warehouse
+    deploy:
+      resources:
+        limits:
+          cpus: ${SPARK_WORKER_CPU_LIMIT:-4.0}
+          memory: ${SPARK_WORKER_MEM_LIMIT:-10g}
+        reservations:
+          memory: ${SPARK_WORKER_MEM_RESERVATION:-8g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
     entrypoint: ["/bin/bash", "-c"]
@@ -150,10 +239,24 @@ services:
     container_name: lakehouse-spark-worker-2
     user: root
     depends_on:
-      - spark-master
+      spark-master:
+        condition: service_healthy
     volumes:
       - ./silver/jobs:/opt/spark/jobs
       - spark-warehouse:/opt/spark/warehouse
+    deploy:
+      resources:
+        limits:
+          cpus: ${SPARK_WORKER_CPU_LIMIT:-4.0}
+          memory: ${SPARK_WORKER_MEM_LIMIT:-10g}
+        reservations:
+          memory: ${SPARK_WORKER_MEM_RESERVATION:-8g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
     entrypoint: ["/bin/bash", "-c"]
@@ -170,12 +273,33 @@ services:
     environment:
       AWS_REGION: us-east-1
     ports:
-      - "8086:8080"   # Trino UI/API
+      - "${TRINO_UI_PORT:-8086}:8080"   # Trino UI/API
     volumes:
       - ./trino/etc:/etc/trino
     depends_on:
-      - hive-metastore
-      - minio
+      hive-metastore:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/v1/info || exit 1"]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${TRINO_CPU_LIMIT:-4.0}
+          memory: ${TRINO_MEM_LIMIT:-8g}
+        reservations:
+          memory: ${TRINO_MEM_RESERVATION:-4g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
 
@@ -186,16 +310,30 @@ services:
     image: postgres:15
     container_name: lakehouse-superset-db
     environment:
-      POSTGRES_DB: superset
-      POSTGRES_USER: superset
-      POSTGRES_PASSWORD: superset
+      POSTGRES_DB: ${SUPERSET_DB_NAME:-superset}
+      POSTGRES_USER: ${SUPERSET_DB_USER:-superset}
+      POSTGRES_PASSWORD: ${SUPERSET_DB_PASSWORD:-superset}
     volumes:
       - superset-db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U superset -d superset"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${POSTGRES_CPU_LIMIT:-1.0}
+          memory: ${POSTGRES_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${POSTGRES_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
 
@@ -206,23 +344,42 @@ services:
       superset-db:
         condition: service_healthy
       trino:
-        condition: service_started
+        condition: service_healthy
     environment:
-      SUPERSET_SECRET_KEY: 'thisISaSECRET_1234changeMeInProduction'
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-thisISaSECRET_1234changeMeInProduction}
       DATABASE_DIALECT: postgresql
-      DATABASE_USER: superset
-      DATABASE_PASSWORD: superset
+      DATABASE_USER: ${SUPERSET_DB_USER:-superset}
+      DATABASE_PASSWORD: ${SUPERSET_DB_PASSWORD:-superset}
       DATABASE_HOST: superset-db
       DATABASE_PORT: 5432
-      DATABASE_DB: superset
+      DATABASE_DB: ${SUPERSET_DB_NAME:-superset}
     ports:
-      - "8088:8088"
+      - "${SUPERSET_PORT:-8088}:8088"
     volumes:
       - ./superset:/app/superset_home
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8088/health || exit 1"]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${SUPERSET_CPU_LIMIT:-2.0}
+          memory: ${SUPERSET_MEM_LIMIT:-4g}
+        reservations:
+          memory: ${SUPERSET_MEM_RESERVATION:-2g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     command: >
       sh -c "
       superset db upgrade &&
-      superset fab create-admin --username admin --firstname Admin --lastname User --email admin@superset.com --password admin || true &&
+      superset fab create-admin --username ${SUPERSET_ADMIN_USERNAME:-admin} --firstname Admin --lastname User --email admin@superset.com --password ${SUPERSET_ADMIN_PASSWORD:-admin} || true &&
       superset init &&
       gunicorn --bind 0.0.0.0:8088 --workers 4 --timeout 120 --limit-request-line 0 --limit-request-field_size 0 'superset.app:create_app()'
       "
@@ -236,16 +393,30 @@ services:
     image: postgres:15
     container_name: lakehouse-airflow-db
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
+      POSTGRES_USER: ${AIRFLOW_DB_USER:-airflow}
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:-airflow}
+      POSTGRES_DB: ${AIRFLOW_DB_NAME:-airflow}
     volumes:
       - airflow-db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${POSTGRES_CPU_LIMIT:-1.0}
+          memory: ${POSTGRES_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${POSTGRES_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
 
@@ -259,32 +430,32 @@ services:
         condition: service_healthy
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
-      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
       _AIRFLOW_DB_MIGRATE: 'true'
       _AIRFLOW_WWW_USER_CREATE: 'true'
-      _AIRFLOW_WWW_USER_USERNAME: airflow
-      _AIRFLOW_WWW_USER_PASSWORD: airflow
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-airflow}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - airflow-logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/config:/opt/airflow/config
+      - ./config:/opt/airflow/config
     entrypoint: /bin/bash
     command:
       - -c
       - |
         airflow db migrate
         airflow users create \
-          --username airflow \
+          --username ${AIRFLOW_ADMIN_USERNAME:-airflow} \
           --firstname Airflow \
           --lastname Admin \
           --role Admin \
-          --email admin@example.com \
-          --password airflow || true
+          --email ${AIRFLOW_ADMIN_EMAIL:-admin@example.com} \
+          --password ${AIRFLOW_ADMIN_PASSWORD:-airflow} || true
     networks:
       - lakehouse-net
 
@@ -298,8 +469,8 @@ services:
         condition: service_completed_successfully
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
-      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
@@ -307,20 +478,34 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - airflow-logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/config:/opt/airflow/config
+      - ./config:/opt/airflow/config
       - ./src:/opt/airflow/src
       - ./bronze:/opt/airflow/bronze
       - ./silver:/opt/airflow/silver
       - ./gold:/opt/airflow/gold
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - "8089:8080"
+      - "${AIRFLOW_PORT:-8089}:8080"
     command: webserver
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${AIRFLOW_WEBSERVER_CPU_LIMIT:-1.0}
+          memory: ${AIRFLOW_WEBSERVER_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${AIRFLOW_WEBSERVER_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
 
@@ -334,8 +519,8 @@ services:
         condition: service_completed_successfully
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
-      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
@@ -343,7 +528,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - airflow-logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/config:/opt/airflow/config
+      - ./config:/opt/airflow/config
       - ./src:/opt/airflow/src
       - ./bronze:/opt/airflow/bronze
       - ./silver:/opt/airflow/silver
@@ -352,9 +537,23 @@ services:
     command: scheduler
     healthcheck:
       test: ["CMD", "airflow", "jobs", "check", "--job-type", "SchedulerJob"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-5}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+    deploy:
+      resources:
+        limits:
+          cpus: ${AIRFLOW_SCHEDULER_CPU_LIMIT:-2.0}
+          memory: ${AIRFLOW_SCHEDULER_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${AIRFLOW_SCHEDULER_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
 
@@ -377,17 +576,30 @@ services:
       minio:
         condition: service_healthy
       hive-metastore:
-        condition: service_started
+        condition: service_healthy
     environment:
       # MinIO / S3 Configuration
-      AWS_ACCESS_KEY_ID: minio
-      AWS_SECRET_ACCESS_KEY: minio123
-      AWS_ENDPOINT_URL: http://minio:9000
-      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minio}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minio123}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://minio:9000}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
       # Hive Metastore
-      HIVE_METASTORE_URI: thrift://hive-metastore:9083
+      HIVE_METASTORE_URI: ${HIVE_METASTORE_URI:-thrift://hive-metastore:9083}
       # Application
       PYTHONPATH: "/app/src"
+    deploy:
+      resources:
+        limits:
+          cpus: ${POSTGRES_CPU_LIMIT:-1.0}
+          memory: ${POSTGRES_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${POSTGRES_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
     # Run on-demand via Airflow, not at startup
@@ -402,13 +614,27 @@ services:
       dockerfile: Dockerfile.dbt
     container_name: lakehouse-dbt
     depends_on:
-      - trino
+      trino:
+        condition: service_healthy
     volumes:
       - ./gold:/usr/app
       - dbt-logs:/usr/app/logs
     environment:
       DBT_PROFILES_DIR: /usr/app
     working_dir: /usr/app
+    deploy:
+      resources:
+        limits:
+          cpus: ${POSTGRES_CPU_LIMIT:-1.0}
+          memory: ${POSTGRES_MEM_LIMIT:-2g}
+        reservations:
+          memory: ${POSTGRES_MEM_RESERVATION:-1g}
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: ${LOG_MAX_FILE:-3}
+    restart: ${RESTART_POLICY:-unless-stopped}
     networks:
       - lakehouse-net
     # Run on-demand via Airflow

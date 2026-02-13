@@ -1,0 +1,81 @@
+version: '3.8'
+
+# Docker Compose Override for DEVELOPMENT Environment
+# Usage: docker-compose -f docker-compose.yaml -f docker-compose.override.dev.yaml up
+
+services:
+  # Reduce Spark workers in dev (only 1 worker instead of 2)
+  spark-worker-2:
+    deploy:
+      replicas: 0  # Disable second worker in dev
+    profiles:
+      - production  # Only run in production profile
+
+  # Add development-specific volumes for hot reload
+  ingestor:
+    volumes:
+      - ./src:/app/src:rw  # Read-write for development
+      - ./bronze:/app/bronze:rw
+      - ./config:/app/config:rw
+      - ./config.yaml:/app/config.yaml:rw
+      - ./config.examples:/app/config.examples:rw
+    command: >
+      sh -c "
+      echo 'Ingestor ready for development';
+      tail -f /dev/null
+      "
+
+  # Enable debug logging for Airflow in dev
+  airflow-webserver:
+    environment:
+      AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
+      AIRFLOW__CORE__PARALLELISM: 4  # Reduced for dev
+      AIRFLOW__CORE__DAG_CONCURRENCY: 2  # Reduced for dev
+    ports:
+      - "5555:5555"  # Expose additional debug port
+
+  airflow-scheduler:
+    environment:
+      AIRFLOW__LOGGING__LOGGING_LEVEL: DEBUG
+      AIRFLOW__SCHEDULER__MAX_THREADS: 1  # Reduced for dev
+
+  # Expose MinIO console directly
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  # Expose Spark Master UI
+  spark-master:
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+      - "4040:4040"  # Spark application UI
+
+  # Expose Trino UI
+  trino:
+    ports:
+      - "8086:8080"
+
+  # Expose Superset
+  superset:
+    ports:
+      - "8088:8088"
+
+  # Expose Airflow
+  airflow-webserver:
+    ports:
+      - "8089:8080"
+
+  # Development database - expose PostgreSQL ports for debugging
+  metastore-db:
+    ports:
+      - "5432:5432"
+
+  superset-db:
+    ports:
+      - "5433:5432"
+
+  airflow-db:
+    ports:
+      - "5434:5432"

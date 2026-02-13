@@ -1,0 +1,529 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lakehouse.example.com/schemas/lakehouse-config-v1.json",
+  "title": "Lakehouse Configuration Schema",
+  "description": "JSON Schema for validating lakehouse pipeline configuration files",
+  "type": "object",
+  "required": ["version", "pipeline", "bronze", "silver", "gold"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^v?[0-9]+\\.[0-9]+(\\.[0-9]+)?$",
+      "description": "Configuration schema version (e.g., 'v1.0', '1.0.0')"
+    },
+    "pipeline": {
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pipeline name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Pipeline description"
+        },
+        "owner": {
+          "type": "string",
+          "format": "email",
+          "description": "Pipeline owner email"
+        },
+        "schedule": {
+          "type": "string",
+          "description": "Cron expression for scheduling"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether pipeline is enabled"
+        }
+      }
+    },
+    "bronze": {
+      "type": "object",
+      "required": ["source", "target"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["type", "name"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["http", "s3", "postgres", "mysql", "api", "kafka"],
+              "description": "Source type"
+            },
+            "name": {
+              "type": "string",
+              "description": "Source name"
+            },
+            "http": {
+              "type": "object",
+              "properties": {
+                "base_url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "file_pattern": {
+                  "type": "string"
+                }
+              }
+            },
+            "params": {
+              "type": "object",
+              "description": "Source-specific parameters"
+            }
+          }
+        },
+        "target": {
+          "type": "object",
+          "required": ["catalog", "database", "table", "storage"],
+          "properties": {
+            "catalog": {
+              "type": "string"
+            },
+            "database": {
+              "type": "string"
+            },
+            "table": {
+              "type": "string"
+            },
+            "storage": {
+              "type": "object",
+              "required": ["format"],
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "enum": ["parquet", "orc", "avro"]
+                },
+                "compression": {
+                  "type": "string",
+                  "enum": ["snappy", "gzip", "lz4", "zstd", "none"]
+                },
+                "partition_by": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "s3": {
+              "type": "object",
+              "required": ["bucket"],
+              "properties": {
+                "bucket": {
+                  "type": "string"
+                },
+                "path_prefix": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "ingestion": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["append", "overwrite"],
+              "default": "append"
+            },
+            "chunk_size": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 1000000
+            },
+            "dedupe_on_load": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "quality_checks": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "silver": {
+      "type": "object",
+      "required": ["source", "target", "transformations"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["catalog", "database", "table"],
+          "properties": {
+            "catalog": {"type": "string"},
+            "database": {"type": "string"},
+            "table": {"type": "string"}
+          }
+        },
+        "target": {
+          "type": "object",
+          "required": ["catalog", "database", "table", "storage"],
+          "properties": {
+            "catalog": {"type": "string"},
+            "database": {"type": "string"},
+            "table": {"type": "string"},
+            "storage": {
+              "type": "object",
+              "required": ["format"],
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "enum": ["parquet", "orc", "avro"]
+                },
+                "compression": {
+                  "type": "string",
+                  "enum": ["snappy", "gzip", "lz4", "zstd", "none"]
+                },
+                "partition_by": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              }
+            },
+            "s3": {
+              "type": "object",
+              "properties": {
+                "bucket": {"type": "string"},
+                "path_prefix": {"type": "string"}
+              }
+            }
+          }
+        },
+        "transformations": {
+          "type": "object",
+          "properties": {
+            "rename_columns": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "cast_columns": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "filters": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dedupe": {
+              "type": "object",
+              "properties": {
+                "enabled": {"type": "boolean"},
+                "partition_by": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                },
+                "order_by": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              }
+            },
+            "derived_columns": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "expression"],
+                "properties": {
+                  "name": {"type": "string"},
+                  "expression": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "quality_checks": {
+          "type": "object",
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "fail_on_error": {"type": "boolean"},
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "type"],
+                "properties": {
+                  "name": {"type": "string"},
+                  "type": {
+                    "type": "string",
+                    "enum": ["null_check", "range_check", "uniqueness_check", "custom"]
+                  },
+                  "columns": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  },
+                  "column": {"type": "string"},
+                  "min": {"type": "number"},
+                  "max": {"type": "number"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "gold": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {"type": "string"},
+              "description": {"type": "string"},
+              "source": {
+                "type": "object",
+                "properties": {
+                  "catalog": {"type": "string"},
+                  "database": {"type": "string"},
+                  "table": {"type": "string"}
+                }
+              },
+              "target": {
+                "type": "object",
+                "properties": {
+                  "catalog": {"type": "string"},
+                  "database": {"type": "string"},
+                  "table": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "infrastructure": {
+      "type": "object",
+      "properties": {
+        "s3": {
+          "type": "object",
+          "properties": {
+            "endpoint": {"type": "string"},
+            "access_key": {"type": "string"},
+            "secret_key": {"type": "string"}
+          }
+        },
+        "metastore": {
+          "type": "object",
+          "properties": {
+            "uri": {"type": "string"}
+          }
+        },
+        "spark": {
+          "type": "object",
+          "properties": {
+            "app_name": {"type": "string"},
+            "master": {"type": "string"},
+            "executor_memory": {"type": "string"},
+            "driver_memory": {"type": "string"}
+          }
+        }
+      }
+    },
+    "data_quality": {
+      "type": "object",
+      "description": "Data quality validation configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable data quality checks"
+        },
+        "fail_on_error": {
+          "type": "boolean",
+          "default": false,
+          "description": "Fail pipeline on quality errors"
+        },
+        "min_quality_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 70.0,
+          "description": "Minimum acceptable quality score"
+        },
+        "enable_error_tracking": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable row-level error tracking"
+        },
+        "enable_anomaly_detection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable anomaly detection"
+        },
+        "enable_expectations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Great Expectations validation"
+        },
+        "max_errors_to_track": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1000,
+          "description": "Maximum errors to track (prevents memory overflow)"
+        },
+        "persist_errors_to_iceberg": {
+          "type": "boolean",
+          "default": true,
+          "description": "Persist errors to Iceberg tables"
+        },
+        "report_directory": {
+          "type": "string",
+          "default": "logs/data_quality",
+          "description": "Directory for quality reports"
+        },
+        "table_type": {
+          "type": "string",
+          "enum": ["taxi_trips", "zones", "generic"],
+          "default": "generic",
+          "description": "Table type for standard expectations"
+        },
+        "checks": {
+          "type": "object",
+          "description": "Column-level quality checks",
+          "properties": {
+            "columns": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "allow_null": {
+                    "type": "boolean",
+                    "description": "Allow null values"
+                  },
+                  "min": {
+                    "type": "number",
+                    "description": "Minimum value"
+                  },
+                  "max": {
+                    "type": "number",
+                    "description": "Maximum value"
+                  },
+                  "values": {
+                    "type": "array",
+                    "description": "Allowed values for categorical columns"
+                  },
+                  "regex": {
+                    "type": "string",
+                    "description": "Regex pattern for string validation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "anomaly_detection": {
+          "type": "object",
+          "description": "Anomaly detection configuration",
+          "properties": {
+            "numeric_columns": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Numeric columns to analyze"
+            },
+            "categorical_columns": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Categorical columns to analyze"
+            },
+            "numeric_method": {
+              "type": "string",
+              "enum": ["zscore", "iqr"],
+              "default": "iqr",
+              "description": "Detection method for numeric columns"
+            },
+            "sensitivity": {
+              "type": "number",
+              "minimum": 0,
+              "default": 3.0,
+              "description": "Sensitivity threshold"
+            },
+            "categorical_min_frequency": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.001,
+              "description": "Minimum frequency for categorical values"
+            },
+            "detect_null_spikes": {
+              "type": "boolean",
+              "default": true,
+              "description": "Detect sudden spikes in null values"
+            }
+          }
+        },
+        "reconciliation": {
+          "type": "object",
+          "description": "Cross-layer reconciliation configuration",
+          "properties": {
+            "row_count_tolerance_pct": {
+              "type": "number",
+              "minimum": 0,
+              "default": 1.0,
+              "description": "Acceptable row count difference percentage"
+            },
+            "key_columns": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Key columns for integrity checks"
+            },
+            "aggregations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["column", "function"],
+                "properties": {
+                  "column": {"type": "string"},
+                  "function": {
+                    "type": "string",
+                    "enum": ["sum", "avg", "min", "max", "count"]
+                  },
+                  "tolerance_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 0.1
+                  }
+                }
+              },
+              "description": "Aggregation checks for reconciliation"
+            }
+          }
+        }
+      }
+    }
+  }
+}

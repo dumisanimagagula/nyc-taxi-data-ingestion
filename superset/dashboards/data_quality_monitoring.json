@@ -1,0 +1,344 @@
+{
+  "dashboard_title": "Data Quality Monitoring",
+  "description": "Comprehensive data quality metrics across Bronze, Silver, and Gold layers",
+  "slug": "data-quality-monitoring",
+  "position_json": "{\"DASHBOARD_VERSION_KEY\": \"v2\"}",
+  "css": "",
+  "json_metadata": "{\"timed_refresh_immune_slices\": [], \"expanded_slices\": {}, \"refresh_frequency\": 0, \"default_filters\": \"{}\", \"color_scheme\": \"\"}",
+  "charts": [
+    {
+      "slice_name": "Overall Quality Score Trend",
+      "viz_type": "line",
+      "datasource": "data_quality.metrics",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": null
+        },
+        "queries": [
+          {
+            "columns": [],
+            "metrics": [
+              {
+                "label": "Avg Quality Score",
+                "expressionType": "SQL",
+                "sqlExpression": "AVG(overall_quality_score)"
+              }
+            ],
+            "time_range": "Last 30 days",
+            "granularity_sqla": "timestamp",
+            "groupby": ["layer"],
+            "filters": []
+          }
+        ]
+      },
+      "description": "Overall quality score trends by layer over time",
+      "params": {
+        "viz_type": "line",
+        "x_axis_label": "Date",
+        "y_axis_label": "Quality Score",
+        "line_interpolation": "linear",
+        "show_legend": true,
+        "rich_tooltip": true
+      }
+    },
+    {
+      "slice_name": "Quality Dimensions Breakdown",
+      "viz_type": "radar",
+      "datasource": "data_quality.metrics",
+      "description": "Multi-dimensional quality scores (Completeness, Validity, Consistency, Accuracy, Timeliness)",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Completeness",
+                "expressionType": "SQL",
+                "sqlExpression": "AVG(completeness_score)"
+              },
+              {
+                "label": "Validity",
+                "expressionType": "SQL",
+                "sqlExpression": "AVG(validity_score)"
+              },
+              {
+                "label": "Consistency",
+                "expressionType": "SQL",
+                "sqlExpression": "AVG(consistency_score)"
+              },
+              {
+                "label": "Accuracy",
+                "expressionType": "SQL",
+                "sqlExpression": "AVG(accuracy_score)"
+              },
+              {
+                "label": "Timeliness",
+                "expressionType": "SQL",
+                "sqlExpression": "AVG(timeliness_score)"
+              }
+            ],
+            "groupby": ["layer"],
+            "filters": [
+              {
+                "col": "timestamp",
+                "op": ">=",
+                "val": "TODAY"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Error Count by Type",
+      "viz_type": "pie",
+      "datasource": "data_quality.row_errors",
+      "description": "Distribution of data quality errors by type",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Error Count",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "groupby": ["error_type"],
+            "time_range": "Last 7 days",
+            "filters": []
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "pie",
+        "show_legend": true,
+        "show_labels": true,
+        "donut": true
+      }
+    },
+    {
+      "slice_name": "Error Severity Heatmap",
+      "viz_type": "heatmap",
+      "datasource": "data_quality.row_errors",
+      "description": "Error severity distribution across tables and time",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Error Count",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "groupby": ["table_name", "severity"],
+            "time_range": "Last 7 days"
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Top 10 Error-Prone Columns",
+      "viz_type": "bar",
+      "datasource": "data_quality.row_errors",
+      "description": "Columns with most quality errors",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Error Count",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "groupby": ["column_name"],
+            "time_range": "Last 30 days",
+            "orderby": [["Error Count", false]],
+            "row_limit": 10
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "bar",
+        "x_axis_label": "Column Name",
+        "y_axis_label": "Error Count",
+        "show_bar_value": true
+      }
+    },
+    {
+      "slice_name": "Anomaly Detection Alerts",
+      "viz_type": "table",
+      "datasource": "data_quality.metrics",
+      "description": "Recent anomalies detected in the data",
+      "query_context": {
+        "queries": [
+          {
+            "columns": ["table_name", "layer", "timestamp", "anomaly_count"],
+            "metrics": [],
+            "time_range": "Last 24 hours",
+            "filters": [
+              {
+                "col": "anomaly_count",
+                "op": ">",
+                "val": 0
+              }
+            ],
+            "orderby": [["timestamp", false]]
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Data Completeness by Column",
+      "viz_type": "dist_bar",
+      "datasource": "data_quality.metrics",
+      "description": "Null percentage distribution across columns",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Avg Null %",
+                "expressionType": "SQL",
+                "sqlExpression": "AVG(CAST(null_percentages AS DOUBLE))"
+              }
+            ],
+            "groupby": ["table_name"],
+            "time_range": "Last 7 days"
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Quality Score Distribution",
+      "viz_type": "histogram",
+      "datasource": "data_quality.metrics",
+      "description": "Distribution of overall quality scores",
+      "query_context": {
+        "queries": [
+          {
+            "columns": ["overall_quality_score"],
+            "metrics": [
+              {
+                "label": "Count",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "time_range": "Last 30 days"
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "histogram",
+        "x_axis_label": "Quality Score",
+        "y_axis_label": "Frequency",
+        "bins": 20
+      }
+    },
+    {
+      "slice_name": "Daily Quality Metrics Summary",
+      "viz_type": "big_number_total",
+      "datasource": "data_quality.metrics",
+      "description": "Latest overall quality score",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Latest Quality Score",
+                "expressionType": "SQL",
+                "sqlExpression": "AVG(overall_quality_score)"
+              }
+            ],
+            "time_range": "Last 24 hours"
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "big_number_total",
+        "subheader": "Data Quality Score"
+      }
+    },
+    {
+      "slice_name": "Error Trend - Last 30 Days",
+      "viz_type": "line",
+      "datasource": "data_quality.row_errors",
+      "description": "Error count trends over time",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Error Count",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "groupby": ["severity"],
+            "time_range": "Last 30 days",
+            "granularity_sqla": "timestamp"
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "line",
+        "x_axis_label": "Date",
+        "y_axis_label": "Error Count",
+        "show_legend": true,
+        "line_interpolation": "linear"
+      }
+    }
+  ],
+  "layout": {
+    "CHART-1": {
+      "id": "CHART-1",
+      "meta": {
+        "chartId": null,
+        "width": 8,
+        "height": 6
+      },
+      "type": "CHART",
+      "parents": ["ROOT_ID", "GRID_ID", "ROW-1"]
+    },
+    "CHART-2": {
+      "id": "CHART-2",
+      "meta": {
+        "chartId": null,
+        "width": 4,
+        "height": 6
+      },
+      "type": "CHART",
+      "parents": ["ROOT_ID", "GRID_ID", "ROW-1"]
+    },
+    "CHART-3": {
+      "id": "CHART-3",
+      "meta": {
+        "chartId": null,
+        "width": 4,
+        "height": 6
+      },
+      "type": "CHART",
+      "parents": ["ROOT_ID", "GRID_ID", "ROW-2"]
+    },
+    "CHART-4": {
+      "id": "CHART-4",
+      "meta": {
+        "chartId": null,
+        "width": 8,
+        "height": 6
+      },
+      "type": "CHART",
+      "parents": ["ROOT_ID", "GRID_ID", "ROW-2"]
+    }
+  },
+  "metadata": {
+    "refresh_frequency": 300,
+    "color_scheme": "supersetColors",
+    "label_colors": {},
+    "shared_label_colors": {},
+    "cross_filters_enabled": false
+  }
+}

@@ -1,0 +1,67 @@
+# ============================================================================
+# LAKEHOUSE PLATFORM - PRODUCTION ENVIRONMENT OVERRIDES
+# ============================================================================
+# This file contains production-specific configuration overrides.
+# Merged with base lakehouse_config.yaml at runtime.
+# ============================================================================
+
+version: "v1.0"
+
+# Override pipeline settings for production
+pipeline:
+  environment: "production"
+  schedule: "0 2 * * *"  # Run at 2 AM in production
+  enabled: true
+  owner: "data-engineering@company.com"
+
+# Production-specific infrastructure (use environment variables)
+infrastructure:
+  s3:
+    endpoint: "${PROD_S3_ENDPOINT}"
+    access_key: "${PROD_S3_ACCESS_KEY}"
+    secret_key: "${PROD_S3_SECRET_KEY}"
+  
+  metastore:
+    uri: "${PROD_METASTORE_URI}"
+  
+  spark:
+    master: "spark://prod-spark-master:7077"
+    executor_memory: "4g"
+    driver_memory: "2g"
+    app_name: "nyc-taxi-production"
+
+# Production ingestion settings (optimized for performance)
+bronze:
+  ingestion:
+    chunk_size: 100000  # Larger chunks for better throughput
+    mode: "append"
+  
+  target:
+    s3:
+      bucket: "prod-bronze"
+  
+  quality_checks:
+    enabled: true
+
+# Production quality checks (strict and blocking)
+silver:
+  quality_checks:
+    enabled: true
+    fail_on_error: true  # FAIL pipeline on quality issues
+  
+  target:
+    s3:
+      bucket: "prod-silver"
+
+# Production gold layer
+gold:
+  models:
+    - name: "daily_trip_stats"
+      target:
+        database: "prod_gold"
+    - name: "hourly_location_analysis"
+      target:
+        database: "prod_gold"
+    - name: "revenue_by_payment_type"
+      target:
+        database: "prod_gold"

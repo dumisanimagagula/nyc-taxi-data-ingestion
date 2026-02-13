@@ -1,0 +1,91 @@
+# Datasets Configuration for Dynamic Task Generation
+# =====================================================
+# This file defines which datasets should be processed by the pipeline
+# Update this file instead of modifying DAG code
+
+datasets:
+  - name: yellow_taxi
+    enabled: true
+    priority: 1
+    description: "Yellow taxi trip records"
+    source:
+      type: parquet
+      base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+      pattern: "yellow_tripdata_{year}-{month:02d}.parquet"
+    target:
+      bronze_table: "bronze.yellow_taxi_raw"
+      silver_table: "silver.yellow_taxi_clean"
+    quality_checks:
+      enabled: true
+      critical: true
+    scheduling:
+      enabled: true
+      frequency: daily
+
+  - name: green_taxi
+    enabled: true
+    priority: 2
+    description: "Green taxi trip records"
+    source:
+      type: parquet
+      base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+      pattern: "green_tripdata_{year}-{month:02d}.parquet"
+    target:
+      bronze_table: "bronze.green_taxi_raw"
+      silver_table: "silver.green_taxi_clean"
+    quality_checks:
+      enabled: true
+      critical: false
+    scheduling:
+      enabled: true
+      frequency: daily
+
+  - name: fhv_taxi
+    enabled: false  # Disabled for now
+    priority: 3
+    description: "For-hire vehicle trip records"
+    source:
+      type: parquet
+      base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+      pattern: "fhv_tripdata_{year}-{month:02d}.parquet"
+    target:
+      bronze_table: "bronze.fhv_taxi_raw"
+      silver_table: "silver.fhv_taxi_clean"
+    quality_checks:
+      enabled: true
+      critical: false
+    scheduling:
+      enabled: false
+      frequency: weekly
+
+  - name: taxi_zones
+    enabled: true
+    priority: 0  # Highest priority (reference data)
+    description: "NYC taxi zone reference data"
+    source:
+      type: csv
+      url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi+_zones.csv"
+    target:
+      bronze_table: "bronze.taxi_zones"
+      silver_table: "silver.taxi_zones"
+    quality_checks:
+      enabled: true
+      critical: true  # Critical reference data
+    scheduling:
+      enabled: true
+      frequency: weekly  # Reference data changes infrequently
+
+# Environment-specific overrides
+environments:
+  dev:
+    default_enabled: true
+    quality_checks_required: false
+    
+  staging:
+    default_enabled: true
+    quality_checks_required: true
+    
+  prod:
+    default_enabled: true
+    quality_checks_required: true
+    fail_on_quality_error: true

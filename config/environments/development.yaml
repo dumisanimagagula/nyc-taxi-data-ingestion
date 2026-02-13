@@ -1,0 +1,41 @@
+# ============================================================================
+# LAKEHOUSE PLATFORM - DEVELOPMENT ENVIRONMENT OVERRIDES
+# ============================================================================
+# This file contains development-specific configuration overrides.
+# Merged with base lakehouse_config.yaml at runtime.
+# ============================================================================
+
+version: "v1.0"
+
+# Override pipeline settings for development
+pipeline:
+  environment: "development"
+  schedule: null  # Disable scheduling in dev (manual trigger only)
+  enabled: true
+
+# Development-specific infrastructure
+infrastructure:
+  s3:
+    endpoint: "http://localhost:9000"
+    access_key: "minio"
+    secret_key: "minio123"
+  
+  metastore:
+    uri: "thrift://localhost:9083"
+  
+  spark:
+    master: "local[*]"
+    executor_memory: "1g"
+    driver_memory: "512m"
+
+# Development ingestion settings (smaller batches for testing)
+bronze:
+  ingestion:
+    chunk_size: 10000  # Smaller chunks for faster dev iterations
+    mode: "overwrite"  # Always overwrite in dev
+
+# Development quality checks (relaxed)
+silver:
+  quality_checks:
+    enabled: true
+    fail_on_error: false  # Don't fail pipeline in dev

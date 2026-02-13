@@ -1,0 +1,331 @@
+{
+  "dashboard_title": "Data Lineage & Pipeline Flow",
+  "description": "Track data flow and transformations across Bronze → Silver → Gold layers",
+  "slug": "data-lineage-pipeline-flow",
+  "position_json": "{\"DASHBOARD_VERSION_KEY\": \"v2\"}",
+  "css": "",
+  "json_metadata": "{\"timed_refresh_immune_slices\": [], \"expanded_slices\": {}, \"refresh_frequency\": 0, \"default_filters\": \"{}\", \"color_scheme\": \"supersetColors\"}",
+  "charts": [
+    {
+      "slice_name": "Lineage Flow - Sankey Diagram",
+      "viz_type": "sankey",
+      "datasource": "data_quality.lineage_events",
+      "description": "Visual representation of data flow from source to target tables",
+      "query_context": {
+        "queries": [
+          {
+            "columns": ["source_table", "target_table"],
+            "metrics": [
+              {
+                "label": "Event Count",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "time_range": "Last 7 days",
+            "groupby": ["source_table", "target_table"]
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "sankey",
+        "source": "source_table",
+        "target": "target_table"
+      }
+    },
+    {
+      "slice_name": "Lineage Events by Type",
+      "viz_type": "pie",
+      "datasource": "data_quality.lineage_events",
+      "description": "Distribution of lineage event types",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Event Count",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "groupby": ["event_type"],
+            "time_range": "Last 30 days"
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "pie",
+        "show_legend": true,
+        "donut": false
+      }
+    },
+    {
+      "slice_name": "Row Count Changes by Layer",
+      "viz_type": "mixed_timeseries",
+      "datasource": "data_quality.lineage_events",
+      "description": "Track row counts across transformations",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Source Rows",
+                "expressionType": "SQL",
+                "sqlExpression": "SUM(source_row_count)"
+              },
+              {
+                "label": "Target Rows",
+                "expressionType": "SQL",
+                "sqlExpression": "SUM(target_row_count)"
+              },
+              {
+                "label": "Rows Added",
+                "expressionType": "SQL",
+                "sqlExpression": "SUM(rows_added)"
+              },
+              {
+                "label": "Rows Deleted",
+                "expressionType": "SQL",
+                "sqlExpression": "SUM(rows_deleted)"
+              }
+            ],
+            "groupby": ["layer"],
+            "time_range": "Last 30 days",
+            "granularity_sqla": "timestamp"
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Transformation Timeline",
+      "viz_type": "line",
+      "datasource": "data_quality.lineage_events",
+      "description": "Timeline of transformation events",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Transformations",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "groupby": ["layer", "event_type"],
+            "time_range": "Last 30 days",
+            "granularity_sqla": "timestamp"
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "line",
+        "show_legend": true,
+        "line_interpolation": "cardinal"
+      }
+    },
+    {
+      "slice_name": "Table Dependency Matrix",
+      "viz_type": "heatmap",
+      "datasource": "data_quality.lineage_events",
+      "description": "Table-to-table dependency heatmap",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Transformation Count",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(*)"
+              }
+            ],
+            "groupby": ["source_table", "target_table"],
+            "time_range": "Last 30 days"
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Recent Lineage Events",
+      "viz_type": "table",
+      "datasource": "data_quality.lineage_events",
+      "description": "Latest lineage events with details",
+      "query_context": {
+        "queries": [
+          {
+            "columns": [
+              "timestamp",
+              "event_type",
+              "source_table",
+              "target_table",
+              "layer",
+              "source_row_count",
+              "target_row_count",
+              "transformation_logic"
+            ],
+            "metrics": [],
+            "time_range": "Last 24 hours",
+            "orderby": [["timestamp", false]],
+            "row_limit": 50
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "table",
+        "page_length": 20,
+        "include_search": true
+      }
+    },
+    {
+      "slice_name": "Layer Processing Volume",
+      "viz_type": "bar",
+      "datasource": "data_quality.lineage_events",
+      "description": "Data volume processed by each layer",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Total Rows Processed",
+                "expressionType": "SQL",
+                "sqlExpression": "SUM(target_row_count)"
+              }
+            ],
+            "groupby": ["layer"],
+            "time_range": "Last 7 days"
+          }
+        ]
+      },
+      "params": {
+        "viz_type": "bar",
+        "x_axis_label": "Layer",
+        "y_axis_label": "Total Rows",
+        "show_bar_value": true,
+        "bar_stacked": false
+      }
+    },
+    {
+      "slice_name": "Column-Level Transformations",
+      "viz_type": "table",
+      "datasource": "data_quality.lineage_events",
+      "description": "Detailed column lineage information",
+      "query_context": {
+        "queries": [
+          {
+            "columns": [
+              "target_table",
+              "column_lineage",
+              "timestamp"
+            ],
+            "metrics": [],
+            "filters": [
+              {
+                "col": "column_lineage",
+                "op": "IS NOT NULL",
+                "val": ""
+              }
+            ],
+            "time_range": "Last 7 days",
+            "orderby": [["timestamp", false]],
+            "row_limit": 100
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Pipeline Run Statistics",
+      "viz_type": "big_number_total",
+      "datasource": "data_quality.lineage_events",
+      "description": "Total transformations in last run",
+      "query_context": {
+        "queries": [
+          {
+            "metrics": [
+              {
+                "label": "Total Events",
+                "expressionType": "SQL",
+                "sqlExpression": "COUNT(DISTINCT event_id)"
+              }
+            ],
+            "time_range": "Last 24 hours"
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Data Loss/Gain Analysis",
+      "viz_type": "paired_ttest",
+      "datasource": "data_quality.lineage_events",
+      "description": "Analyze data volume changes across transformations",
+      "query_context": {
+        "queries": [
+          {
+            "columns": ["target_table"],
+            "metrics": [
+              {
+                "label": "Rows Added",
+                "expressionType": "SQL",
+                "sqlExpression": "SUM(COALESCE(rows_added, 0))"
+              },
+              {
+                "label": "Rows Deleted",
+                "expressionType": "SQL",
+                "sqlExpression": "SUM(COALESCE(rows_deleted, 0))"
+              }
+            ],
+            "groupby": ["target_table"],
+            "time_range": "Last 7 days"
+          }
+        ]
+      }
+    }
+  ],
+  "layout": {
+    "CHART-1": {
+      "id": "CHART-1",
+      "meta": {
+        "chartId": null,
+        "width": 12,
+        "height": 8
+      },
+      "type": "CHART",
+      "parents": ["ROOT_ID", "GRID_ID", "ROW-1"]
+    },
+    "CHART-2": {
+      "id": "CHART-2",
+      "meta": {
+        "chartId": null,
+        "width": 4,
+        "height": 5
+      },
+      "type": "CHART",
+      "parents": ["ROOT_ID", "GRID_ID", "ROW-2"]
+    },
+    "CHART-3": {
+      "id": "CHART-3",
+      "meta": {
+        "chartId": null,
+        "width": 8,
+        "height": 5
+      },
+      "type": "CHART",
+      "parents": ["ROOT_ID", "GRID_ID", "ROW-2"]
+    },
+    "CHART-4": {
+      "id": "CHART-4",
+      "meta": {
+        "chartId": null,
+        "width": 12,
+        "height": 6
+      },
+      "type": "CHART",
+      "parents": ["ROOT_ID", "GRID_ID", "ROW-3"]
+    }
+  },
+  "metadata": {
+    "refresh_frequency": 600,
+    "color_scheme": "supersetColors",
+    "label_colors": {},
+    "shared_label_colors": {},
+    "cross_filters_enabled": true
+  }
+}
