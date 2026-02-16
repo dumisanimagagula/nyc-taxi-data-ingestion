@@ -16,3 +16,6 @@ RUN pip install --no-cache-dir \
     apache-airflow-providers-apache-spark==4.9.0 \
     apache-airflow-providers-docker==3.12.0 \
     apache-airflow-providers-common-sql==1.26.0
+
+# Force PySpark 3.5.0 to match Spark cluster version (overrides provider dependency)
+RUN pip install --no-cache-dir --force-reinstall pyspark==3.5.0

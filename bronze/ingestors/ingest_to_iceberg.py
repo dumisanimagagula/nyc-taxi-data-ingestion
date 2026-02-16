@@ -339,6 +339,10 @@ class BronzeIngestor:
                 else:
                     table.append(arrow_chunk)
 
+                # Refresh table metadata after write to prevent stale metadata errors
+                # Each append creates a new snapshot, so we need to reload the table
+                table = self.catalog.load_table(table_identifier)
+
                 total_written += len(chunk_df)
                 logger.info(
                     "  Chunk %s/%s: +%s rows (total: %s)",
