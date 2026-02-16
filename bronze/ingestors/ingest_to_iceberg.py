@@ -45,11 +45,11 @@ class BronzeIngestor:
         self.config = self._load_config(config_path, validate)
         self.dataset_name = dataset
         self.datasets_config = self._load_datasets_config()
-        
+
         # Apply dataset-specific overrides if provided
         if self.dataset_name:
             self._apply_dataset_overrides()
-        
+
         self.catalog = self._init_catalog()
 
     def _load_datasets_config(self) -> dict[str, Any]:
@@ -58,11 +58,11 @@ class BronzeIngestor:
             # Infer datasets config path from main config path
             config_dir = Path(__file__).parent.parent.parent / "config" / "datasets"
             datasets_config_path = config_dir / "datasets.yaml"
-            
+
             if not datasets_config_path.exists():
                 logger.warning("Datasets config not found at %s, using defaults", datasets_config_path)
                 return {"datasets": []}
-            
+
             with open(datasets_config_path) as f:
                 return yaml.safe_load(f) or {"datasets": []}
         except Exception as e:
@@ -73,26 +73,53 @@ class BronzeIngestor:
         """Apply dataset-specific configuration overrides"""
         if not self.dataset_name:
             return
-        
+
         logger.info("Applying dataset-specific overrides for: %s", self.dataset_name)
-        
+
         # Find dataset in datasets config
         datasets = self.datasets_config.get("datasets", [])
         dataset = next((ds for ds in datasets if ds["name"] == self.dataset_name), None)
-        
+
         if not dataset:
             logger.error("Dataset '%s' not found in datasets.yaml", self.dataset_name)
             raise ConfigurationError(f"Dataset '{self.dataset_name}' not found in datasets.yaml")
-        
-        # Override source configuration
+
+        # Override source configuration based on source type
         if "source" in dataset:
-            taxi_type = self.dataset_name.split("_")[0]  # Extract taxi type from dataset name
-            year = self.config["bronze"]["source"]["params"].get("year", 2021)
-            month = self.config["bronze"]["source"]["params"].get("month", 1)
-            
-            self.config["bronze"]["source"]["params"]["taxi_type"] = taxi_type
-            logger.info("  - Source taxi_type: %s", taxi_type)
-        
+            source_config = dataset["source"]
+            source_type = source_config.get("type", "parquet")
+
+            if source_type == "csv":
+                # Reference datasets with direct URL (e.g., taxi_zones)
+                if "url" in source_config:
+                    self.config["bronze"]["source"]["type"] = "http"
+                    self.config["bronze"]["source"]["http"] = {"base_url": "", "file_pattern": "{dataset_url}"}
+                    # Store the direct URL in params for _fetch_http_data to use
+                    self.config["bronze"]["source"]["params"]["dataset_url"] = source_config["url"]
+                    self.config["bronze"]["source"]["params"]["source_type"] = "csv"
+                    logger.info("  - Source type: CSV (reference data)")
+                    logger.info("  - Source URL: %s", source_config["url"])
+            else:
+                # Trip data with pattern-based URLs (yellow_taxi, green_taxi, etc.)
+                taxi_type = self.dataset_name.split("_")[0]  # Extract taxi type from dataset name
+                year = self.config["bronze"]["source"]["params"].get("year", 2021)
+                month = self.config["bronze"]["source"]["params"].get("month", 1)
+
+                # Set base_url and file_pattern from dataset config if available
+                if "base_url" in source_config:
+                    self.config["bronze"]["source"]["http"] = {
+                        "base_url": source_config["base_url"],
+                        "file_pattern": source_config.get(
+                            "pattern", "{taxi_type}_tripdata_{year:04d}-{month:02d}.parquet"
+                        ),
+                    }
+                    logger.info("  - Source base_url: %s", source_config["base_url"])
+                    logger.info("  - Source pattern: %s", source_config.get("pattern"))
+
+                self.config["bronze"]["source"]["params"]["taxi_type"] = taxi_type
+                self.config["bronze"]["source"]["params"]["source_type"] = "parquet"
+                logger.info("  - Source taxi_type: %s", taxi_type)
+
         # Override target table
         if "target" in dataset:
             bronze_table = dataset["target"].get("bronze_table", "")
@@ -186,20 +213,39 @@ class BronzeIngestor:
             raise DataSourceError(f"Unsupported source type: {source_type}")
 
     def _fetch_http_data(self, source_config: dict[str, Any]) -> pd.DataFrame:
-        """Fetch data from HTTP source with optimized chunk handling"""
+        """Fetch data from HTTP source with optimized chunk handling
+
+        Supports both standard pattern-based URLs (trip data) and direct URLs (reference data):
+        - Trip data: base_url + pattern (e.g., taxi_zones pattern)
+        - Reference data: direct URL from dataset config (e.g., taxi_zone_lookup)
+        """
         http_config = source_config["http"]
         params = source_config["params"]
+        source_type = params.get("source_type", "parquet")
 
-        # Build URL from pattern
-        file_pattern = http_config["file_pattern"]
-        url = "{}/{}".format(http_config["base_url"], file_pattern.format(**params))
+        # Check if this is a direct URL (for reference datasets like taxi_zones)
+        if "dataset_url" in params:
+            # Direct URL for reference datasets
+            url = params["dataset_url"]
+            logger.info("Using direct reference dataset URL")
+        else:
+            # Pattern-based URL for trip data
+            file_pattern = http_config["file_pattern"]
+            url = "{}/{}".format(http_config["base_url"], file_pattern.format(**params))
 
         logger.info("Downloading from: %s", url)
 
         try:
-            # Download parquet file
-            df = pd.read_parquet(url)
-            logger.info("✓ Downloaded %s rows", f"{len(df):,}")
+            # Fetch based on source type (CSV vs Parquet)
+            if source_type == "csv":
+                logger.info("Reading data as CSV...")
+                df = pd.read_csv(url)
+                logger.info("✓ Downloaded %s rows", f"{len(df):,}")
+            else:
+                # Default to Parquet
+                logger.info("Reading data as Parquet...")
+                df = pd.read_parquet(url)
+                logger.info("✓ Downloaded %s rows", f"{len(df):,}")
 
             # Handle columns with all NULL values (null Arrow type)
             # These cause "Unsupported type: null" errors in PyIceberg
@@ -212,11 +258,14 @@ class BronzeIngestor:
             # Note: Use naive timestamp (no timezone) to match Iceberg schema expectation
             df["_ingestion_timestamp"] = datetime.now(timezone.utc).replace(tzinfo=None)
             df["_source_file"] = url
-            df["year"] = params.get("year")
-            df["month"] = params.get("month")
 
-            # Performance: Add partition key columns early for better pruning
-            logger.info("✓ Added partition columns (year, month) for query optimization")
+            # Add partition columns only for trip data (not for reference data like taxi_zones)
+            if source_type != "csv" and "year" in params and params.get("year"):
+                df["year"] = params.get("year")
+                df["month"] = params.get("month")
+                logger.info("✓ Added partition columns (year, month) for query optimization")
+            else:
+                logger.info("✓ Reference dataset (no time partitioning)")
 
             return df
 

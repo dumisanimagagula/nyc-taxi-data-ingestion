@@ -259,7 +259,9 @@ with DAG(
                 bash_command="""
                 docker exec lakehouse-ingestor python /app/bronze/ingestors/ingest_to_iceberg.py \
                     --config /app/config/pipelines/lakehouse_config.yaml \
-                    --dataset """ + dataset_name + """
+                    --dataset """
+                + dataset_name
+                + """
                 """,
             )
 
