@@ -258,7 +258,8 @@ with DAG(
                 task_id=f"ingest_{dataset_name}",
                 bash_command="""
                 docker exec lakehouse-ingestor python /app/bronze/ingestors/ingest_to_iceberg.py \
-                    --config /app/config/pipelines/lakehouse_config.yaml
+                    --config /app/config/pipelines/lakehouse_config.yaml \
+                    --dataset """ + dataset_name + """
                 """,
             )
 

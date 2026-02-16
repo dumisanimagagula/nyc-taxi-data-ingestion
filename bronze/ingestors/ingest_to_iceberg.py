@@ -34,14 +34,76 @@ logger = logging.getLogger(__name__)
 class BronzeIngestor:
     """Config-driven ingestor for Bronze layer (raw data -> Iceberg)"""
 
-    def __init__(self, config_path: str, validate: bool = True):
+    def __init__(self, config_path: str, dataset: str = None, validate: bool = True):
         """Initialize ingestor with configuration
 
         Args:
             config_path: Path to configuration file
+            dataset: Optional dataset name to override config (e.g., 'green_taxi')
             validate: Whether to validate configuration (recommended)
         """
         self.config = self._load_config(config_path, validate)
+        self.dataset_name = dataset
+        self.datasets_config = self._load_datasets_config()
+        
+        # Apply dataset-specific overrides if provided
+        if self.dataset_name:
+            self._apply_dataset_overrides()
+        
+        self.catalog = self._init_catalog()
+
+    def _load_datasets_config(self) -> dict[str, Any]:
+        """Load datasets configuration from datasets.yaml in config directory"""
+        try:
+            # Infer datasets config path from main config path
+            config_dir = Path(__file__).parent.parent.parent / "config" / "datasets"
+            datasets_config_path = config_dir / "datasets.yaml"
+            
+            if not datasets_config_path.exists():
+                logger.warning("Datasets config not found at %s, using defaults", datasets_config_path)
+                return {"datasets": []}
+            
+            with open(datasets_config_path) as f:
+                return yaml.safe_load(f) or {"datasets": []}
+        except Exception as e:
+            logger.warning("Failed to load datasets config: %s", e)
+            return {"datasets": []}
+
+    def _apply_dataset_overrides(self):
+        """Apply dataset-specific configuration overrides"""
+        if not self.dataset_name:
+            return
+        
+        logger.info("Applying dataset-specific overrides for: %s", self.dataset_name)
+        
+        # Find dataset in datasets config
+        datasets = self.datasets_config.get("datasets", [])
+        dataset = next((ds for ds in datasets if ds["name"] == self.dataset_name), None)
+        
+        if not dataset:
+            logger.error("Dataset '%s' not found in datasets.yaml", self.dataset_name)
+            raise ConfigurationError(f"Dataset '{self.dataset_name}' not found in datasets.yaml")
+        
+        # Override source configuration
+        if "source" in dataset:
+            taxi_type = self.dataset_name.split("_")[0]  # Extract taxi type from dataset name
+            year = self.config["bronze"]["source"]["params"].get("year", 2021)
+            month = self.config["bronze"]["source"]["params"].get("month", 1)
+            
+            self.config["bronze"]["source"]["params"]["taxi_type"] = taxi_type
+            logger.info("  - Source taxi_type: %s", taxi_type)
+        
+        # Override target table
+        if "target" in dataset:
+            bronze_table = dataset["target"].get("bronze_table", "")
+            if bronze_table:
+                # Parse "database.table" format
+                parts = bronze_table.split(".")
+                if len(parts) == 2:
+                    self.config["bronze"]["target"]["database"] = parts[0]
+                    self.config["bronze"]["target"]["table"] = parts[1]
+                    logger.info("  - Target table: %s", bronze_table)
+
         self.catalog = self._init_catalog()
 
     def _load_config(self, config_path: str, validate: bool = True) -> dict[str, Any]:
@@ -424,15 +486,17 @@ class BronzeIngestor:
 
 @click.command()
 @click.option("--config", type=str, required=True, help="Path to configuration YAML file")
-def main(config: str):
+@click.option("--dataset", type=str, required=False, help="Dataset name to ingest (e.g., 'yellow_taxi', 'green_taxi')")
+def main(config: str, dataset: str = None):
     """
     Bronze Layer Ingestor - Config-Driven
 
     Example:
         python ingest_to_iceberg.py --config /app/config/pipelines/lakehouse_config.yaml
+        python ingest_to_iceberg.py --config /app/config/pipelines/lakehouse_config.yaml --dataset green_taxi
     """
     try:
-        ingestor = BronzeIngestor(config)
+        ingestor = BronzeIngestor(config, dataset=dataset)
         ingestor.ingest()
     except Exception as e:
         logger.error("Ingestion failed: %s", e, exc_info=True)
