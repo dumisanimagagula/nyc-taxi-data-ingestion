@@ -515,18 +515,33 @@ class BronzeIngestor:
             return []
 
     def _check_not_null(self, df: pd.DataFrame, columns) -> list:
-        """Check for null values in columns."""
+        """Check for null values in columns.
+
+        Gracefully handles missing columns (common with different dataset types).
+        """
         failures = []
         for col in columns:
+            # Skip if column doesn't exist in DataFrame (dataset-specific differences)
+            if col not in df.columns:
+                logger.debug(f"Column '{col}' not found in DataFrame, skipping null check")
+                continue
+
             null_count = df[col].isnull().sum()
             if null_count > 0:
                 failures.append(f"{col} has {null_count} null values")
         return failures
 
     def _check_positive_values(self, df: pd.DataFrame, columns) -> list:
-        """Check for positive values in columns."""
+        """Check for positive values in columns.
+
+        Gracefully handles missing columns (common with different dataset types).
+        """
         failures = []
         for col in columns:
+            # Skip if column doesn't exist in DataFrame (dataset-specific differences)
+            if col not in df.columns:
+                logger.debug(f"Column '{col}' not found in DataFrame, skipping positive values check")
+                continue
             negative_count = (df[col] <= 0).sum()
             if negative_count > 0:
                 failures.append(f"{col} has {negative_count} non-positive values")
