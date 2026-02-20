@@ -31,7 +31,7 @@ infrastructure:
 # Development ingestion settings (smaller batches for testing)
 bronze:
   ingestion:
-    chunk_size: 10000  # Smaller chunks for faster dev iterations
+    chunk_size: 2000000  # Single-chunk write to reduce Hive lock contention
     mode: "overwrite"  # Always overwrite in dev
 
 # Development quality checks (relaxed)
