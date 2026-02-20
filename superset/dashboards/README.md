@@ -256,15 +256,15 @@ WITH (
 1. Navigate to **Data** → **Databases** → **+ Database**
 2. Select **Trino** from supported databases
 3. Enter connection details:
-   ```
 
+   ```text
    Host: trino
    Port: 8080
    Catalog: lakehouse
    Schema: data_quality
-
    ```
-4. Test connection and save
+
+1. Test connection and save
 
 ---
 
@@ -338,6 +338,7 @@ Update `json_metadata`:
    SELECT COUNT(*) FROM data_quality.row_errors;
    SELECT COUNT(*) FROM data_quality.lineage_events;
    ```
+
 1. Check time range filters: Adjust in chart settings
 2. Run pipeline: Generate some quality events first
 

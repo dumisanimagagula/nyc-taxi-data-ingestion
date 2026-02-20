@@ -444,13 +444,7 @@ WHERE year = 2021 AND month IN (1, 2, 3)
 
 **Algorithm**:
 
-```
-Total Rows: 1,200,000
-Chunk Size: 50,000 rows
-Chunks: 24
-
-For each chunk:
-  1. Extract 50k rows from source
+```text
   2. Convert to PyArrow table
   3. Write to Iceberg (append/overwrite)
   4. Log progress
@@ -468,7 +462,7 @@ Result: All rows written, memory-efficient
 
 **Two-Phase Caching**:
 
-**Phase 1: Bronze Cache**
+#### Phase 1: Bronze Cache
 
 ```python
 df = spark.table("bronze.nyc_taxi_raw")  # Read from MinIO
@@ -476,7 +470,7 @@ df = df.cache()                          # Cache entire table
 df.count()                               # Trigger materialization
 ```
 
-**Phase 2: Transform Cache**
+#### Phase 2: Transform Cache
 
 ```python
 # After adding partition columns (year, month)
@@ -510,7 +504,7 @@ WHERE pickup_datetime >= (
 
 **Incremental Performance Comparison**:
 
-```
+```text
 Full Refresh:
 - Process all 12M rows
 - Compute all 3.5M aggregates  
@@ -564,7 +558,7 @@ performance:
 
 **Before Optimization**:
 
-```
+```text
 Bronze read:        10.5s
 Silver transform:   45.2s
 Gold aggregation:   280.1s
@@ -575,7 +569,7 @@ Queries/min:        2
 
 **After Optimization**:
 
-```
+```text
 Bronze read:        2.1s   (5x faster - partitions)
 Silver transform:   8.3s   (5x faster - caching)
 Gold aggregation:   32.5s  (8x faster - incremental)
@@ -633,7 +627,7 @@ WHERE pickup_datetime > '2021-06-01'  # Partition pruning won't trigger
 
 **Chunk Size Calculator**:
 
-```
+```text
 safe_chunk_size = (executor_memory_gb * 0.8) / (row_size_bytes / 1_000_000) * 1_000_000
 
 Example:
@@ -823,7 +817,7 @@ spark.sql.adaptive.coalescePartitions.minPartitionNum = 1
 ## Performance Comparison Summary
 
 | Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
+| ------ | ------ | ----- | ----------- |
 | **Bronze Query** | 10.5s | 2.1s | 5x faster |
 | **Silver Transform** | 45.2s | 8.3s | 5x faster |
 | **Gold Aggregation** | 280.1s | 32.5s | 8.6x faster |

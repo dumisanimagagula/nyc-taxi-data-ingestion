@@ -280,7 +280,7 @@ Changes:
 ### Resource Limits Added
 
 | Service | Dev CPU | Dev RAM | Prod CPU | Prod RAM |
-|---------|---------|---------|----------|----------|
+| ------- | ------- | ------- | -------- | -------- |
 | MinIO | 0.5 | 512MB | 2.0 | 4GB |
 | PostgreSQL (3x) | 0.5 | 512MB | 2.0 | 4GB |
 | Hive Metastore | 0.5 | 512MB | 2.0 | 4GB |
@@ -633,4 +633,4 @@ The infrastructure improvements provide a **production-ready, scalable, and main
 
 ---
 
-**Implementation Complete: February 11, 2025**
+Implementation Complete: February 11, 2025

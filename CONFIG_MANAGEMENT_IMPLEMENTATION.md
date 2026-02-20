@@ -371,11 +371,11 @@ python scripts/validate_config.py --info
 # Validate for production
 
 python scripts/validate_config.py --environment production
-```text
-
-**Output Example**:
 ```
 
+**Output Example**:
+
+```text
 ================================================================================
 Validating: config/pipelines/lakehouse_config.yaml
 ================================================================================
@@ -384,8 +384,7 @@ Validating: config/pipelines/lakehouse_config.yaml
 ✓ Configuration validated successfully
 
 ✓ Configuration is VALID
-
-```text
+```
 
 ---
 
@@ -394,6 +393,7 @@ Validating: config/pipelines/lakehouse_config.yaml
 **Purpose**: Comprehensive guide for configuration management
 
 **Sections**:
+
 1. Quick Start
 2. Configuration Structure
 3. Environment Management
@@ -413,6 +413,7 @@ Validating: config/pipelines/lakehouse_config.yaml
 ### `config/pipelines/lakehouse_config.yaml`
 
 **Added**:
+
 ```yaml
 
 # Version field (REQUIRED as of v1.0)

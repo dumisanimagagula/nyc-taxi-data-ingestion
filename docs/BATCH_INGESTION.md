@@ -214,7 +214,7 @@ ingestion:
 python ingest_nyc_taxi_data.py
 ```
 
-**Step 2: Add more months (batch mode)**
+### Step 2: Add more months (batch mode)
 
 ```yaml
 

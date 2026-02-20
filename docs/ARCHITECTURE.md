@@ -174,7 +174,7 @@ FROM {{ source('silver', 'nyc_taxi_clean') }}
 GROUP BY year, month, day_of_week, pickup_location_id
 ```
 
-### Configuration
+### Gold Configuration
 
 ```yaml
 gold:
@@ -187,7 +187,7 @@ gold:
             expression: count(*)
           - name: avg_fare
             expression: avg(fare_amount)
-```text
+```
 
 ## Orchestration Layer (Airflow)
 
@@ -219,10 +219,7 @@ ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
 3. **BashOperator**: Run dbt commands
 4. **PythonOperator**: Data quality checks
 
-### Configuration
-
-```yaml
-orchestration:
+### Orchestration Configuration
   dag:
     schedule_interval: "0 2 * * *"  # Daily at 2 AM
 

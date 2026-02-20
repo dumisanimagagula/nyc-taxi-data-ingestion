@@ -14,8 +14,7 @@ Consolidated duplicate DAG versions to use only the production-ready version. Al
 ### 1. DAG Files
 
 | Action | File | New Location |
-|--------|------|--------------|
-| **Archived** | `nyc_taxi_medallion_dag.py` (v1) | `airflow/dags/archive/nyc_taxi_medallion_dag_v1_archived_20260211.py` |
+| ------ | ---- | ------------ |
 | **Renamed** | `nyc_taxi_medallion_dag_v2.py` | `airflow/dags/nyc_taxi_medallion_dag.py` |
 | **Updated** | `airflow/dags/nyc_taxi_medallion_dag.py` | Removed all `v2` references |
 | **Unchanged** | `airflow/dags/dag_factory.py` | Remains as-is (factory pattern) |
@@ -23,7 +22,7 @@ Consolidated duplicate DAG versions to use only the production-ready version. Al
 ### 2. Test Files
 
 | Action | File | New Location |
-|--------|------|--------------|
+| ------ | ---- | ------------ |
 | **Renamed** | `test_dag_v2_validation.py` | `test_dag_validation.py` |
 | **Updated** | `test_dag_validation.py` | All imports and DAG ID references updated |
 

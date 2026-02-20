@@ -257,7 +257,7 @@ Benefits:
 ### Airflow Variables (11 total)
 
 | Variable | Purpose | Dev Value | Prod Value |
-|----------|---------|-----------|------------|
+| -------- | ------- | --------- | ---------- |
 | `AIRFLOW_ENV` | Environment identifier | `dev` | `prod` |
 | `CONFIG_BASE_PATH` | Base config path | `/app/config` | `/app/config` |
 | `PIPELINE_CONFIG_PATH` | Pipeline YAML path | `/app/config/pipelines/lakehouse_config.yaml` | Same |

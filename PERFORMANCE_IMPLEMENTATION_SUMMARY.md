@@ -258,7 +258,7 @@ performance:
 ## Performance Metrics - Before & After
 
 | **Metric** | **Before** | **After** | **Improvement** |
-|-----------|-----------|----------|-----------------|
+| --------- | --------- | -------- | --------------- |
 | **Bronze Query** | 10.5s | 2.1s | **5x faster** |
 | **Silver Transform** | 45.2s | 8.3s | **5x faster** |
 | **Gold Aggregation** | 280.1s | 32.5s | **8.6x faster** |

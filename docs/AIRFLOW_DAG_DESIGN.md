@@ -882,6 +882,7 @@ python -c "from airflow.models import Variable; print(type(Variable.get('ENABLE_
 
    airflow variables set ENABLE_DATA_QUALITY true
    ```
+
 1. Check branching function logic
 2. Review DAG logs for branch decision
 

@@ -39,7 +39,7 @@ The NYC Taxi Lakehouse includes a comprehensive, production-ready data quality f
     │  Great  │  │Reconcile │  │  Reports   │
     │Expect.  │  │ Layers   │  │(JSON/TXT)  │
     └─────────┘  └──────────┘  └────────────┘
-```text
+```
 
 ## Quick Start
 
@@ -70,30 +70,18 @@ See [Configuration Reference](#configuration-reference) for full options.
 ```python
 from src.data_quality import DataQualityOrchestrator
 from src.enhanced_config_loader import ConfigLoader
-
-# Load config
-
 config = ConfigLoader("config/pipelines/lakehouse_config.yaml").get_config()
 dq_config = config["data_quality"]
-
-# Create orchestrator
-
 orchestrator = DataQualityOrchestrator(
     spark=spark,
     config=dq_config,
     pipeline_run_id="my_pipeline_run_123"
 )
-
-# Validate table (runs all enabled checks)
-
 result = orchestrator.validate_table(
     df=my_dataframe,
     table_name="lakehouse.silver.nyc_taxi_clean",
     layer="silver"
 )
-
-# Check results
-
 if not result['passed']:
     logger.warning(f"Quality score: {result['overall_score']:.2f} - {result['quality_level']}")
     logger.warning(f"Errors: {result['total_errors']}, Anomalies: {result['anomaly_count']}")
@@ -103,21 +91,17 @@ if not result['passed']:
 
 ```python
 from src.data_quality import AnomalyDetector, ReconciliationChecker
-
 # Anomaly detection only
-
 detector = AnomalyDetector()
 anomalies = detector.detect_numeric_iqr(df, "fare_amount")
-
 # Reconciliation only
-
 checker = ReconciliationChecker(spark)
 result = checker.check_row_count(
     source_table="lakehouse.bronze.nyc_taxi_raw",
     target_table="lakehouse.silver.nyc_taxi_clean",
     tolerance_pct=1.0
 )
-```text
+```
 
 ### 3. View Results
 
@@ -135,7 +119,7 @@ Quality metrics are saved to:
 Measures data quality across 5 dimensions:
 
 | Dimension | Description | Calculation |
-|-----------|-------------|-------------|
+| --------- | ----------- | ----------- |
 | **Completeness** | Non-null rate | `100 - avg_null_percentage` |
 | **Validity** | Data type & range conformance | `100 - violation_rate` |
 | **Consistency** | Business rule compliance | `checks_passed / total_checks * 100` |
@@ -145,6 +129,7 @@ Measures data quality across 5 dimensions:
 **Overall Score**: Weighted average (25%, 25%, 20%, 20%, 10%)
 
 **Quality Levels**:
+
 - EXCELLENT: 95-100
 - GOOD: 85-94
 - FAIR: 70-84

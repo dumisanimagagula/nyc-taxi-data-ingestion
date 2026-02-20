@@ -502,7 +502,7 @@ pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=xml
 ### Coverage Targets
 
 | Module | Target | Current Status |
-|--------|--------|-----------------|
+| ------ | ------ | -------------- |
 | src/ | 80% | TBD |
 | bronze/ | 80% | TBD |
 | silver/ | 80% | TBD |

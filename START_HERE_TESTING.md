@@ -181,7 +181,7 @@ reports = terminal, HTML (htmlcov/), XML (coverage.xml)
 ## 📈 Test Statistics
 
 | Metric | Value |
-|--------|-------|
+| ------ | ----- |
 | Total Tests | 70 |
 | Unit Tests | 37 |
 | Integration Tests | 6 |

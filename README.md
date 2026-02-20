@@ -367,7 +367,7 @@ gold:
 
 4. **Data flows through medallion**
 
-   ```
+   ```text
    Source → Bronze (raw) → Silver (clean) → Gold (aggregated) → Analytics
    ```
 
