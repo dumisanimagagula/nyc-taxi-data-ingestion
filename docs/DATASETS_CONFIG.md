@@ -526,6 +526,7 @@ source:
 ```
 
 ❌ Bad:
+
 ```yaml
 - name: dataset1
   description: "Data"

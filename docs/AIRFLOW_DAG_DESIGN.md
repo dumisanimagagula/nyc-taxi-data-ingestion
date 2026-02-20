@@ -261,6 +261,7 @@ airflow connections add spark_default \
 ```
 
 **Production** (Kubernetes):
+
 ```bash
 airflow connections add spark_k8s \
   --conn-type spark \
@@ -372,6 +373,7 @@ Simply change `enabled: false`:
 ### Step 1: Review Current DAG
 
 Identify hardcoded values in `nyc_taxi_medallion_dag.py`:
+
 - Docker exec commands
 - Config file paths
 - Spark configurations
@@ -447,6 +449,7 @@ airflow dags test nyc_taxi_medallion_pipeline 2024-01-01
 ### Step 6: Validate Results
 
 Check:
+
 - All tasks executed successfully
 - Health checks passed
 - Data quality checks ran (if enabled)
@@ -657,6 +660,7 @@ pipeline_success = Counter('pipeline_success_total', 'Total successful runs')
 **Symptom**: `check_spark_master` sensor times out
 
 **Diagnosis**:
+
 ```bash
 
 # Check if Spark master is running
@@ -756,8 +760,10 @@ airflow connections add spark_default \
 **Error**: `Failed to download org.apache.iceberg:iceberg-spark-runtime...`
 
 **Solutions**:
+
 1. Check internet connectivity
 2. Use local JAR files:
+
    ```python
    SparkSubmitOperator(
        jars="/opt/spark/jars/iceberg-spark-runtime.jar",
@@ -765,6 +771,7 @@ airflow connections add spark_default \
 
    )
    ```
+
 3. Configure Maven mirror in Spark config
 
 #### Out of Memory Errors
@@ -772,7 +779,9 @@ airflow connections add spark_default \
 **Error**: `OutOfMemoryError: Java heap space`
 
 **Solutions**:
+
 1. Increase executor memory:
+
    ```python
    SparkSubmitOperator(
        executor_memory="8g",  # Increased from 4g
@@ -781,13 +790,16 @@ airflow connections add spark_default \
 
    )
    ```
+
 2. Reduce parallelism:
+
    ```python
    conf={
        "spark.sql.shuffle.partitions": "100",  # Default: 200
 
    }
    ```
+
 3. Enable adaptive query execution (already configured)
 
 ### Dynamic Task Generation Issues
@@ -797,6 +809,7 @@ airflow connections add spark_default \
 **Symptom**: Bronze/Silver task groups are empty
 
 **Diagnosis**:
+
 ```bash
 
 # Check datasets config exists
@@ -869,8 +882,8 @@ python -c "from airflow.models import Variable; print(type(Variable.get('ENABLE_
 
    airflow variables set ENABLE_DATA_QUALITY true
    ```
-2. Check branching function logic
-3. Review DAG logs for branch decision
+1. Check branching function logic
+2. Review DAG logs for branch decision
 
 ### Configuration Issues
 
@@ -879,6 +892,7 @@ python -c "from airflow.models import Variable; print(type(Variable.get('ENABLE_
 **Error**: `Variable SPARK_MASTER_URL not found`
 
 **Solutions**:
+
 ```bash
 
 # List all variables
@@ -899,6 +913,7 @@ airflow variables set SPARK_MASTER_URL "spark://spark-master:7077"
 **Error**: `TypeError: expected bool, got str`
 
 **Solution**:
+
 ```bash
 
 # Use --json flag for booleans
@@ -1027,6 +1042,7 @@ airflow tasks test nyc_taxi_medallion_pipeline check_spark_master 2024-01-01
 ## Support
 
 For questions or issues:
+
 - **Email**: data-engineering@company.com
 - **Slack**: #data-engineering
 - **Documentation**: `docs/` directory in project root

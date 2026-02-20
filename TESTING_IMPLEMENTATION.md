@@ -62,6 +62,7 @@ Successfully implemented comprehensive testing coverage for the NYC Taxi Data La
 #### Unit Tests: `tests/unit/test_spark_jobs.py` (500+ lines)
 
 **Classes**:
+
 - `TestBronzeIngestion` (5 tests)
   - Schema validation during ingestion
   - Data type casting
@@ -90,6 +91,7 @@ Successfully implemented comprehensive testing coverage for the NYC Taxi Data La
 #### Unit Tests: `tests/unit/test_config_management.py` (400+ lines)
 
 **Classes**:
+
 - `TestConfigValidation` (5 tests)
   - Required fields validation
   - Pipeline metadata
@@ -127,6 +129,7 @@ Successfully implemented comprehensive testing coverage for the NYC Taxi Data La
 #### Integration Tests: `tests/integration/test_data_quality_integration.py` (380+ lines)
 
 **Classes**:
+
 - `TestDataQualityIntegration` (3 tests)
   - Orchestrator end-to-end
   - Metrics + Error Tracking integration
@@ -145,6 +148,7 @@ Successfully implemented comprehensive testing coverage for the NYC Taxi Data La
 #### E2E Tests: `tests/e2e/test_medallion_pipeline.py` (350+ lines)
 
 **Classes**:
+
 - `TestBronzeToSilverPipeline` (2 tests)
   - Bronze→Silver transformation
   - Problematic data handling
@@ -162,6 +166,7 @@ Successfully implemented comprehensive testing coverage for the NYC Taxi Data La
 #### Airflow Tests: `tests/airflow/test_dag_validation.py` (350+ lines)
 
 **Classes**:
+
 - `TestDAGStructure` (5 tests)
   - DAG import validation
   - DAG ID, owner, schedule
@@ -383,6 +388,7 @@ pytest tests/e2e/test_medallion_pipeline.py::TestFullMedallionPipeline::test_ful
 All testing dependencies already added to `requirements.txt`:
 
 ```
+
 pytest 8.3.3
 pytest-cov 6.0.0
 pytest-mock 3.14.0
@@ -393,6 +399,7 @@ coverage[toml] 7.6.1
 faker 28.4.1
 freezegun 1.5.1
 responses 0.25.3
+
 ```text
 
 ## Architecture Coverage

@@ -9,11 +9,13 @@ Implemented **comprehensive testing infrastructure** for the NYC Taxi Data Lakeh
 ### 📦 Test Framework (Production Grade)
 
 **Configuration**:
+
 - ✅ `pytest.ini` - Professional pytest configuration with 13 markers, coverage targets, and timeouts
 - ✅ `tests/conftest.py` - 13 shared fixtures (Spark session, test data generators, mocks)
 - ✅ `requirements.txt` - 8 new testing dependencies (mocking, parallelization, benchmarking)
 
 **Dependencies Added**:
+
 ```text
 pytest-mock 3.14.0         # Mocking support
 
@@ -414,6 +416,7 @@ open htmlcov/index.html
 ## Conclusion
 
 **Comprehensive testing infrastructure is now in place**, providing:
+
 - 70 production-ready tests
 - Professional-grade pytest configuration
 - Reusable test fixtures

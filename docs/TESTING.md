@@ -212,6 +212,7 @@ pytest -k "not slow"
 **Purpose**: Fast, isolated testing of individual components
 
 **Examples**:
+
 - `test_spark_jobs.py`: Spark transformation logic
   - Schema validation in ingestion
   - Data type casting
@@ -234,6 +235,7 @@ pytest -k "not slow"
 **Execution Time**: ~100ms total
 
 **Running**:
+
 ```bash
 pytest -m unit
 pytest tests/unit/
@@ -320,6 +322,7 @@ pytest tests/airflow/
 **Purpose**: Comprehensive data quality framework testing
 
 **Running**:
+
 ```bash
 pytest -m data_quality
 ```text
@@ -509,6 +512,7 @@ pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=xml
 ### Viewing Coverage
 
 **Terminal**:
+
 ```text
 coverage_coverage.py 85% (17/20)
 data_quality/metrics.py 92% (61/66)

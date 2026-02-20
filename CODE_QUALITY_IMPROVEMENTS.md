@@ -11,6 +11,7 @@ This document summarizes the code quality improvements implemented based on the 
 **Issue**: Hardcoded credentials in `docker-compose.yaml` posed security risks
 
 **Solution**:
+
 - Created `.env` file for environment-specific configuration
 - Updated all service configurations to use environment variables with sensible defaults
 - Services updated:
@@ -22,11 +23,13 @@ This document summarizes the code quality improvements implemented based on the 
   - Airflow App: `AIRFLOW_ADMIN_USERNAME`, `AIRFLOW_ADMIN_PASSWORD`, `AIRFLOW_FERNET_KEY`
 
 **Files Modified**:
+
 - `docker-compose.yaml`: Updated all service environment sections
 - `.env`: Created with development defaults
 - `.env.example`: Already existed with documentation
 
-**Impact**: 
+**Impact**:
+
 - ✅ Credentials can now be changed without modifying code
 - ✅ Different credentials for dev/staging/prod environments
 - ✅ `.env` already in `.gitignore` - won't be committed
@@ -38,6 +41,7 @@ This document summarizes the code quality improvements implemented based on the 
 **Solution**: Replaced with `datetime.now(timezone.utc)`
 
 **Code Change**:
+
 ```python
 
 # Before
@@ -166,6 +170,7 @@ class LakehouseException(Exception)
 ```
 
 **Refactored Main Method**:
+
 ```python
 
 # Before: 40+ lines with nested conditionals
@@ -260,6 +265,7 @@ logger.info("✓ Database verified via SQL")
 ```
 
 **Impact**:
+
 - ✅ Clearer intent
 - ✅ Marginally better performance
 

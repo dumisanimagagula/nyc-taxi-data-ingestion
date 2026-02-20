@@ -2,7 +2,7 @@
 
 ## Overview
 
-This platform implements a **medallion architecture** (Bronze → Silver → Gold) using modern open-source data tools. The key principle is **separation of concerns**: Airflow controls *when* things run, not *how* data is transformed.
+This platform implements a **medallion architecture** (Bronze → Silver → Gold) using modern open-source data tools. The key principle is **separation of concerns**: Airflow controls _when_ things run, not _how_ data is transformed.
 
 ## Architecture Layers
 
@@ -250,6 +250,7 @@ orchestration:
 ### Bucket Structure
 
 ```
+
 minio/
 ├── bronze/          # Raw data
 
@@ -460,6 +461,7 @@ transformations:
 ---
 
 **This architecture is designed to be**:
+
 - ✅ **Scalable**: Handles growing data volumes
 - ✅ **Maintainable**: Config-driven, no code changes
 - ✅ **Testable**: Quality checks at every layer

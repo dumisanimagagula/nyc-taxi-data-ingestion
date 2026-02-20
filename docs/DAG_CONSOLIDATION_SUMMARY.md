@@ -30,21 +30,25 @@ Consolidated duplicate DAG versions to use only the production-ready version. Al
 ### 3. Documentation Files
 
 Updated all references to `v2` in:
-- ✅ `docs/AIRFLOW_DAG_DESIGN.md` 
+
+- ✅ `docs/AIRFLOW_DAG_DESIGN.md`
 - ✅ `docs/AIRFLOW_SETUP.md`
 - ✅ `docs/AIRFLOW_IMPLEMENTATION_SUMMARY.md`
 
 ### 4. Configuration Updates
 
 **DAG ID Change**:
+
 - Previous: `nyc_taxi_medallion_pipeline_v2`
 - Current: `nyc_taxi_medallion_pipeline` (standard name)
 
 **DAG Description**:
+
 - Previous: "Production-ready medallion architecture pipeline (v2 - Decoupled)"
 - Current: "Production-ready medallion architecture pipeline with config-driven orchestration"
 
 **DAG Tags**:
+
 - Removed: `"v2"`
 - Current tags: `["nyc-taxi", "medallion", "lakehouse", "production", "config-driven"]`
 
@@ -105,17 +109,19 @@ nyc_taxi_medallion_pipeline
    airflow dags pause nyc_taxi_medallion_pipeline_v2
    ```
 
-2. **Clear any running instances**:
+1. **Clear any running instances**:
+
    ```bash
    airflow dags delete nyc_taxi_medallion_pipeline_v2
    ```
 
-3. **Unpause the new DAG**:
+2. **Unpause the new DAG**:
+
    ```bash
    airflow dags unpause nyc_taxi_medallion_pipeline
    ```
 
-4. **Update any external references**:
+3. **Update any external references**:
    - Job schedulers referencing the old DAG ID
    - Monitoring dashboards
    - Alert configurations
@@ -230,7 +236,8 @@ The current production DAG includes all improvements:
    airflow variables import config/airflow/variables_dev.json
    ```
 
-2. Configure Spark connection:
+1. Configure Spark connection:
+
    ```bash
    airflow connections add spark_default \
      --conn-type spark \
@@ -238,7 +245,8 @@ The current production DAG includes all improvements:
      --conn-port 7077
    ```
 
-3. Trigger the DAG:
+2. Trigger the DAG:
+
    ```bash
    airflow dags trigger nyc_taxi_medallion_pipeline
    ```
@@ -256,6 +264,7 @@ The current production DAG includes all improvements:
 ## Support
 
 **Questions or Issues?**
+
 - Email: data-engineering@company.com
 - Slack: #data-engineering
 - Documentation: `docs/AIRFLOW_DAG_DESIGN.md`

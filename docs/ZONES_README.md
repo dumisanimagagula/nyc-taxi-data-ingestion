@@ -52,6 +52,7 @@ docker compose run --rm ingestor python ingest_zones.py
 ```
 
 **Option 3: Ingest zones along with trip data**
+
 ```bash
 
 # Use a config with zones.enabled=true
@@ -111,6 +112,7 @@ LIMIT 20;
 ## Index
 
 An index is automatically created on `LocationID` for faster JOIN operations:
+
 ```sql
 CREATE INDEX idx_zones_location_id ON zones ("LocationID");
 ```text

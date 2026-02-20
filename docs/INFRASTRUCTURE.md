@@ -231,6 +231,7 @@ docker-compose -f docker-compose.yaml -f docker-compose.override.staging.yaml up
 ### Production (.env.prod)
 
 **Characteristics:**
+
 - Maximum resources (100%)
 - Secure passwords (MUST CHANGE before deployment)
 - Always restart (unless-stopped policy)
@@ -241,10 +242,12 @@ docker-compose -f docker-compose.yaml -f docker-compose.override.staging.yaml up
 - Alerting configured
 
 **Total Resource Footprint:**
+
 - CPUs: ~30-35 cores
 - Memory: ~50-60GB RAM
 
 **Usage:**
+
 ```bash
 
 # Copy and CUSTOMIZE environment file

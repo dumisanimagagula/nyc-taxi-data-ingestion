@@ -17,6 +17,7 @@ The following infrastructure issues were identified and resolved:
 **Problem:** No CPU or memory limits defined for any service, risking resource exhaustion.
 
 **Solution:**
+
 - Added `deploy.resources.limits` and `reservations` to all 16 services
 - Environment-specific resource allocation (dev: 50%, staging: 75%, prod: 100%)
 - Total footprint: Dev ~20-25GB, Staging ~35-40GB, Prod ~50-60GB RAM
@@ -26,6 +27,7 @@ The following infrastructure issues were identified and resolved:
 **Problem:** Single docker-compose.yaml used for all environments.
 
 **Solution:**
+
 - Created 3 environment-specific .env files (.env.dev, .env.staging, .env.prod)
 - Created 3 environment-specific compose overrides
 - Each environment optimized for its use case
@@ -35,6 +37,7 @@ The following infrastructure issues were identified and resolved:
 **Problem:** Only .env.example existed, no active environment configuration.
 
 **Solution:**
+
 - Created fully-configured .env files for each environment
 - All services now use ${VAR:-default} syntax for configuration
 - 40+ environment variables per environment
@@ -44,6 +47,7 @@ The following infrastructure issues were identified and resolved:
 **Problem:** Only 7 out of 16 services had health checks (44%).
 
 **Solution:**
+
 - Added health checks to 9 missing services (100% coverage)
 - Environment-specific health check intervals (dev: 15s, prod: 30s)
 - Proper depends_on with service_healthy conditions
@@ -53,6 +57,7 @@ The following infrastructure issues were identified and resolved:
 **Problem:** Inconsistent depends_on conditions, services starting before dependencies ready.
 
 **Solution:**
+
 - Updated all depends_on to use condition: service_healthy
 - Defined strict startup sequence (6 layers)
 - Expected startup: dev 3-5 min, staging 5-7 min, prod 7-10 min
@@ -62,6 +67,7 @@ The following infrastructure issues were identified and resolved:
 **Problem:** No restart policies defined, manual intervention required on failures.
 
 **Solution:**
+
 - Added environment-specific restart policies
 - Dev: `no` (manual control for debugging)
 - Staging: `unless-stopped` (auto-restart)
@@ -72,6 +78,7 @@ The following infrastructure issues were identified and resolved:
 **Problem:** No monitoring or metrics collection.
 
 **Solution:**
+
 - Added optional Prometheus + Grafana stack in prod override
 - Conditional via ENABLE_MONITORING env var
 - MinIO metrics endpoint configured
@@ -81,6 +88,7 @@ The following infrastructure issues were identified and resolved:
 **Problem:** Manual deployment, no scripts or procedures.
 
 **Solution:**
+
 - Created comprehensive deployment script (deploy.ps1)
 - Created teardown script with safety checks (teardown.ps1)
 - Created health check script with watch mode (healthcheck.ps1)
@@ -290,12 +298,14 @@ Changes:
 ### Health Checks Added
 
 **New Health Checks:**
+
 1. hive-metastore: `nc -z localhost 9083`
 2. spark-master: `curl -f http://localhost:8080`
 3. trino: `curl -f http://localhost:8080/v1/info`
 4. superset: `curl -f http://localhost:8088/health`
 
 **Existing Health Checks Updated:**
+
 - All now use environment-specific intervals/timeouts
 - Dev: 15s interval, 20s start period
 - Prod: 30s interval, 90s start period
@@ -303,6 +313,7 @@ Changes:
 ### Startup Dependencies
 
 **Dependency Chain:**
+
 ```text
 1. Storage Layer
    ├── MinIO
@@ -603,6 +614,7 @@ notepad .env  # Review and customize
 The infrastructure improvements provide a **production-ready, scalable, and maintainable** foundation for the NYC Taxi Data Lakehouse. All identified issues have been resolved with comprehensive solutions, extensive documentation, and automated tooling.
 
 **Key Achievements:**
+
 - ✅ 100% health check coverage (16/16 services)
 - ✅ 100% resource limit coverage (16/16 services)
 - ✅ 3 environment-specific configurations
@@ -612,6 +624,7 @@ The infrastructure improvements provide a **production-ready, scalable, and main
 - ✅ Production-ready security posture
 
 **Impact:**
+
 - Reduced operational burden through automation
 - Improved reliability with health checks and restart policies
 - Enhanced security with environment separation

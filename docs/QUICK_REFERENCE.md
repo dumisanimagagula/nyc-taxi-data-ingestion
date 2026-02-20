@@ -148,13 +148,13 @@ docker compose run --rm ingestor python example_zones_join.py
    docker compose run --rm -e CONFIG_PATH=my_custom.yaml ingestor
    ```
 
-2. **Zones First**: When `zones.enabled=true`, zones are ingested automatically before trip data
+1. **Zones First**: When `zones.enabled=true`, zones are ingested automatically before trip data
 
-3. **Zones Optional**: Set `zones.enabled=false` or omit zones section to skip zones ingestion
+2. **Zones Optional**: Set `zones.enabled=false` or omit zones section to skip zones ingestion
 
-4. **Batch + Zones**: Use `batch_2021_q1_with_zones.yaml` to ingest zones once, then all Q1 data
+3. **Batch + Zones**: Use `batch_2021_q1_with_zones.yaml` to ingest zones once, then all Q1 data
 
-5. **Test First**: Test with small configs before running full-year batches
+4. **Test First**: Test with small configs before running full-year batches
 
 ---
 

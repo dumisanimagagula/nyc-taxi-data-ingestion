@@ -9,6 +9,7 @@ This guide provides step-by-step deployment procedures for the NYC Taxi Data Lak
 ### System Requirements
 
 **Development:**
+
 - 16GB RAM minimum (32GB recommended)
 - 8 CPU cores minimum
 - 50GB free disk space
@@ -16,6 +17,7 @@ This guide provides step-by-step deployment procedures for the NYC Taxi Data Lak
 - Docker Compose v2.0+
 
 **Staging:**
+
 - 32GB RAM minimum (64GB recommended)
 - 16 CPU cores minimum
 - 100GB free disk space
@@ -23,6 +25,7 @@ This guide provides step-by-step deployment procedures for the NYC Taxi Data Lak
 - Docker Compose v2.0+
 
 **Production:**
+
 - 64GB RAM minimum (128GB recommended)
 - 32 CPU cores minimum
 - 500GB free disk space (1TB+ for data storage)
@@ -608,6 +611,7 @@ taskkill /PID <pid> /F
 ```
 
 **2. Out of Memory**
+
 ```powershell
 
 # Check Docker memory limit
@@ -670,6 +674,7 @@ Restart-Service docker
 ```
 
 **If Data Corruption Suspected:**
+
 ```powershell
 
 # 1. Stop stack

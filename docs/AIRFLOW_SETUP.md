@@ -156,6 +156,7 @@ airflow connections add spark_default \
 ```
 
 **Kubernetes (Cloud)**:
+
 ```bash
 airflow connections add spark_k8s \
   --conn-type spark \
@@ -350,6 +351,7 @@ docker-compose restart airflow-scheduler
 ```
 
 **Issue**: Variable not found
+
 ```bash
 
 # Solution: Check variable exists
@@ -526,6 +528,7 @@ SparkSubmitOperator(
 ```
 
 **Airflow Workers**:
+
 ```bash
 
 # Scale workers
