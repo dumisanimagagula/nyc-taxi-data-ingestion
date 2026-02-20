@@ -476,7 +476,12 @@ services:
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+      AIRFLOW__CORE__TASK_EXECUTION_TIMEOUT: '7200'
+      AIRFLOW__WEBSERVER__WORKERS: '2'
+      AIRFLOW__WEBSERVER__WORKER_TIMEOUT: '240'
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
+      SPARK_HOME: /opt/spark
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       HADOOP_CONF_DIR: /opt/hadoop/conf
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -531,8 +536,10 @@ services:
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+      AIRFLOW__CORE__TASK_EXECUTION_TIMEOUT: '7200'
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
       SPARK_HOME: /opt/spark
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       HADOOP_CONF_DIR: /opt/hadoop/conf
     volumes:
       - ./airflow/dags:/opt/airflow/dags

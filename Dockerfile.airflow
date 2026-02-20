@@ -1,13 +1,27 @@
 FROM apache/airflow:2.9.3-python3.11
 
 USER root
+
+# Install Java and other dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     openjdk-17-jre-headless \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Set JAVA_HOME for spark-submit
+# Set JAVA_HOME
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# Install Spark 3.5.0 binaries
+ENV SPARK_VERSION=3.5.0
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$PATH:${SPARK_HOME}/bin:${SPARK_HOME}/sbin
+
+RUN wget -q https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz \
+    && tar -xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz -C /opt/ \
+    && mv /opt/spark-${SPARK_VERSION}-bin-hadoop3 ${SPARK_HOME} \
+    && rm spark-${SPARK_VERSION}-bin-hadoop3.tgz \
+    && chown -R airflow:root ${SPARK_HOME}
 
 USER airflow
 
