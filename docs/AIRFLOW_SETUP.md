@@ -90,6 +90,9 @@ docker exec lakehouse-airflow airflow dags trigger nyc_taxi_medallion_pipeline
 | `S3_SECRET_KEY` | `minio123` | `CHANGE_IN_PROD` | S3/MinIO secret key |
 | `ENABLE_DATA_QUALITY` | `false` | `true` | Enable DQ checks |
 | `ENABLE_LINEAGE` | `false` | `true` | Enable lineage tracking |
+| `SPARK_DRIVER_MEMORY` | `1g` | `2g` | Spark driver memory per task |
+| `SPARK_EXECUTOR_MEMORY` | `2g` | `4g` | Spark executor memory per task |
+| `SPARK_TOTAL_EXECUTOR_CORES` | `2` | `4` | Max total executor cores |
 | `ALERT_EMAILS` | `dev@company.com` | `ops@company.com` | Alert email list |
 
 ### Variable Management Commands

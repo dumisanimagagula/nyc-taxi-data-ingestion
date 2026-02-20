@@ -52,6 +52,17 @@ MINIO_ENDPOINT = Variable.get("MINIO_ENDPOINT", default_var="http://minio:9000")
 ENABLE_DATA_QUALITY = Variable.get("ENABLE_DATA_QUALITY", default_var=True, deserialize_json=True)
 ENABLE_LINEAGE = Variable.get("ENABLE_LINEAGE", default_var=True, deserialize_json=True)
 
+# Spark resource defaults (environment-aware, overridable via Airflow Variables)
+DEFAULT_SPARK_DRIVER_MEMORY = "1g" if ENVIRONMENT in {"dev", "development"} else "2g"
+DEFAULT_SPARK_EXECUTOR_MEMORY = "2g" if ENVIRONMENT in {"dev", "development"} else "4g"
+DEFAULT_SPARK_TOTAL_EXECUTOR_CORES = 2 if ENVIRONMENT in {"dev", "development"} else 4
+
+SPARK_DRIVER_MEMORY = Variable.get("SPARK_DRIVER_MEMORY", default_var=DEFAULT_SPARK_DRIVER_MEMORY)
+SPARK_EXECUTOR_MEMORY = Variable.get("SPARK_EXECUTOR_MEMORY", default_var=DEFAULT_SPARK_EXECUTOR_MEMORY)
+SPARK_TOTAL_EXECUTOR_CORES = int(
+    Variable.get("SPARK_TOTAL_EXECUTOR_CORES", default_var=str(DEFAULT_SPARK_TOTAL_EXECUTOR_CORES))
+)
+
 # Pipeline-specific configurations
 PIPELINE_CONFIG_PATH = f"{CONFIG_BASE_PATH}/pipelines/lakehouse_config.yaml"
 DATASETS_CONFIG_PATH = f"{CONFIG_BASE_PATH}/datasets/datasets.yaml"
@@ -293,9 +304,9 @@ with DAG(
                 name=f"silver_transform_{dataset_name}",
                 verbose=True,
                 deploy_mode="client",
-                driver_memory="2g",
-                executor_memory="4g",
-                total_executor_cores=4,
+                driver_memory=SPARK_DRIVER_MEMORY,
+                executor_memory=SPARK_EXECUTOR_MEMORY,
+                total_executor_cores=SPARK_TOTAL_EXECUTOR_CORES,
             )
 
     # ========================================================================
@@ -319,9 +330,9 @@ with DAG(
             name="gold_aggregation",
             verbose=True,
             deploy_mode="client",
-            driver_memory="2g",
-            executor_memory="4g",
-            total_executor_cores=4,
+            driver_memory=SPARK_DRIVER_MEMORY,
+            executor_memory=SPARK_EXECUTOR_MEMORY,
+            total_executor_cores=SPARK_TOTAL_EXECUTOR_CORES,
         )
 
     # ========================================================================
