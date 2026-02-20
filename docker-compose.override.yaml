@@ -1,15 +1,14 @@
 version: '3.8'
 
 # Docker Compose Override - Health Check Fix
-# This override fixes the hive-metastore health check issue by using a working command
+# This override keeps hive-metastore health checks dependency-free
 # It ensures dependent services can start properly
 
 services:
-  # Fix hive-metastore health check (nc not available, use lsof instead)
+  # Fix hive-metastore health check using bash TCP probe
   hive-metastore:
     healthcheck:
-      # Use lsof to check if port 9083 is listening (more reliable than nc)
-      test: ["CMD-SHELL", "lsof -i :9083 || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9083' || exit 1"]
       interval: ${HEALTHCHECK_INTERVAL:-30s}
       timeout: ${HEALTHCHECK_TIMEOUT:-10s}
       retries: ${HEALTHCHECK_RETRIES:-5}

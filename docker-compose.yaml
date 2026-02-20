@@ -136,7 +136,7 @@ services:
       - ./docker-init-scripts/hive-jars/aws-java-sdk-bundle-1.11.375.jar:/opt/hadoop/share/hadoop/common/lib/aws-java-sdk-bundle-1.11.375.jar
       - ./docker-init-scripts/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9083 || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9083' || exit 1"]
       interval: ${HEALTHCHECK_INTERVAL:-30s}
       timeout: ${HEALTHCHECK_TIMEOUT:-10s}
       retries: ${HEALTHCHECK_RETRIES:-5}

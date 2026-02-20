@@ -10,7 +10,7 @@ version: "v1.0"
 # Override pipeline settings for development
 pipeline:
   environment: "development"
-  schedule: null  # Disable scheduling in dev (manual trigger only)
+  schedule: ""  # Disable scheduling in dev (manual trigger only)
   enabled: true
 
 # Development-specific infrastructure
