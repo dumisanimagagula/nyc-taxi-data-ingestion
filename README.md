@@ -207,6 +207,7 @@ SELECT * FROM iceberg.gold.daily_trip_stats LIMIT 10;
 ## 📁 Project Structure
 
 ```
+
 nyc-taxi-data-ingestion/
 │
 ├── config/                          # All configuration (YAML only!)
@@ -365,7 +366,8 @@ gold:
    - Gold: Generates dbt models from config
 
 4. **Data flows through medallion**
-   ```
+
+   ```text
    Source → Bronze (raw) → Silver (clean) → Gold (aggregated) → Analytics
    ```
 
@@ -558,6 +560,7 @@ MIT License - See LICENSE file
 **Built with ❤️ for modern data engineering**
 
 ```
+
 ├── src/                          # Source code
 
 │   ├── ingest_nyc_taxi_data.py  # Main ingestion script

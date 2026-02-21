@@ -11,26 +11,31 @@ Comprehensive configuration management system has been implemented for the NYC T
 ## Objectives Achieved
 
 ✅ **JSON Schema Validation**
+
 - Prevent configuration errors before runtime
 - Enforce correct data types, required fields, and value constraints
 - Support multiple schema versions for backward compatibility
 
 ✅ **Configuration Versioning**
+
 - Track configuration evolution over time
 - Automatic migration from older versions
 - Version compatibility checks
 
 ✅ **Multi-Environment Support**
+
 - Separate configs for development, staging, production
 - Environment-specific overrides with deep merge
 - Environment variable expansion for secrets
 
 ✅ **Enhanced Error Reporting**
+
 - Detailed validation error messages
 - Path-specific error locations
 - CLI tools for validation
 
 ✅ **Backward Compatibility**
+
 - Existing code continues to work
 - Optional validation (recommended but not required)
 - Gradual migration path
@@ -44,12 +49,14 @@ Comprehensive configuration management system has been implemented for the NYC T
 **Purpose**: Define valid configuration structure
 
 **Features**:
+
 - 300+ line comprehensive schema
 - Validates all major sections: pipeline, bronze, silver, gold
 - Enforces data types, enums, required fields
 - Supports multi-version schemas
 
 **Example Validations**:
+
 ```json
 {
   "taxi_type": {
@@ -146,15 +153,18 @@ gold:
 **Purpose**: Validate configurations against JSON schemas
 
 **Key Classes**:
+
 - `ConfigValidator`: Schema-based validation
 
 **Features**:
+
 - Load schemas from directory
 - Multi-version schema support
 - Detailed error reporting with field paths
 - List validation errors
 
 **Usage**:
+
 ```python
 from src.config_validator import ConfigValidator
 
@@ -269,6 +279,7 @@ print(f"Version: {info['version']}, Valid: {info['is_valid']}")
 #### `config_loader.py` (Extended)
 
 **Changes**:
+
 - Added `load_lakehouse_config()` function
 - Added `validate_lakehouse_config()` function
 - Added `get_config_info()` function
@@ -276,6 +287,7 @@ print(f"Version: {info['version']}, Valid: {info['is_valid']}")
 - Integrated with enhanced loader
 
 **Before**:
+
 ```python
 import yaml
 
@@ -359,10 +371,11 @@ python scripts/validate_config.py --info
 # Validate for production
 
 python scripts/validate_config.py --environment production
-```text
+```
 
 **Output Example**:
-```
+
+```text
 ================================================================================
 Validating: config/pipelines/lakehouse_config.yaml
 ================================================================================
@@ -371,7 +384,7 @@ Validating: config/pipelines/lakehouse_config.yaml
 ✓ Configuration validated successfully
 
 ✓ Configuration is VALID
-```text
+```
 
 ---
 
@@ -380,6 +393,7 @@ Validating: config/pipelines/lakehouse_config.yaml
 **Purpose**: Comprehensive guide for configuration management
 
 **Sections**:
+
 1. Quick Start
 2. Configuration Structure
 3. Environment Management
@@ -399,6 +413,7 @@ Validating: config/pipelines/lakehouse_config.yaml
 ### `config/pipelines/lakehouse_config.yaml`
 
 **Added**:
+
 ```yaml
 
 # Version field (REQUIRED as of v1.0)
@@ -511,6 +526,7 @@ Configuration Info:
 ### 1. **Early Error Detection**
 
 **Before**: Errors discovered during pipeline execution (wasted time)
+
 ```text
 ERROR: Invalid taxi_type 'invalid' - pipeline failed after 30 minutes
 ```text
@@ -525,6 +541,7 @@ ERROR: Invalid taxi_type 'invalid' - pipeline failed after 30 minutes
 ### 2. **Environment Separation**
 
 **Before**: Single config with commented sections
+
 ```yaml
 
 # chunk_size: 10000  # Development
@@ -571,6 +588,7 @@ s3:
 **Before**: Breaking changes with no migration path
 
 **After**: Automatic migration from old versions
+
 ```python
 
 # Old config (v0.9) automatically migrated to v1.0
@@ -644,6 +662,7 @@ version: "1.0"
 ```
 
 **Step 2**: Validate existing configs
+
 ```bash
 python scripts/validate_config.py --all
 ```text

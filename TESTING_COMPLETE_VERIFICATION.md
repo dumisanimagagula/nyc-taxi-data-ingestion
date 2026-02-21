@@ -113,7 +113,7 @@
 ### By Category
 
 | Category | Tests | Time | Status |
-|----------|-------|------|--------|
+| -------- | ----- | ---- | ------ |
 | Unit | 37 | ~1-2s | ✅ |
 | Integration | 6 | ~5-10s | ✅ |
 | E2E | 6 | ~15-30s | ✅ |
@@ -123,7 +123,7 @@
 ### Test Markers
 
 | Marker | Count | Purpose |
-|--------|-------|---------|
+| ------ | ----- | ------- |
 | @unit | 37 | Fast isolated tests |
 | @integration | 6 | Component interactions |
 | @e2e | 6 | Full pipelines |
@@ -137,7 +137,7 @@
 ### Code Coverage
 
 | Module | Target | Status |
-|--------|--------|--------|
+| ------ | ------ | ------ |
 | src/ | 80%+ | Setup |
 | bronze/ | 80%+ | In tests |
 | silver/ | 80%+ | In tests |

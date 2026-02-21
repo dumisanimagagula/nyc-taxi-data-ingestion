@@ -9,6 +9,7 @@ This directory contains pre-configured Superset dashboard definitions for monito
 Comprehensive data quality metrics dashboard with 10 charts:
 
 **Charts Included:**
+
 1. **Overall Quality Score Trend** (Line Chart)
    - Track quality scores over time by layer
    - Helps identify quality degradation early
@@ -59,6 +60,7 @@ Comprehensive data quality metrics dashboard with 10 charts:
 Track data transformations and dependencies across layers with 10 charts:
 
 **Charts Included:**
+
 1. **Lineage Flow - Sankey Diagram** (Sankey)
    - Visual data flow from Bronze → Silver → Gold
    - Understand transformation paths
@@ -120,7 +122,7 @@ Track data transformations and dependencies across layers with 10 charts:
 
 1. **Login to Superset**: Navigate to `http://localhost:8088`
 2. **Navigate to Dashboards**: Click "Dashboards" in top menu
-3. **Import Dashboard**: 
+3. **Import Dashboard**:
    - Click "⋮" (three dots) → "Import dashboard"
    - Select dashboard JSON file
    - Click "Import"
@@ -254,13 +256,15 @@ WITH (
 1. Navigate to **Data** → **Databases** → **+ Database**
 2. Select **Trino** from supported databases
 3. Enter connection details:
-   ```
+
+   ```text
    Host: trino
    Port: 8080
    Catalog: lakehouse
    Schema: data_quality
    ```
-4. Test connection and save
+
+1. Test connection and save
 
 ---
 
@@ -334,14 +338,16 @@ Update `json_metadata`:
    SELECT COUNT(*) FROM data_quality.row_errors;
    SELECT COUNT(*) FROM data_quality.lineage_events;
    ```
-2. Check time range filters: Adjust in chart settings
-3. Run pipeline: Generate some quality events first
+
+1. Check time range filters: Adjust in chart settings
+2. Run pipeline: Generate some quality events first
 
 ### Charts Not Refreshing
 
 **Issue:** Dashboard shows stale data
 
 **Solutions:**
+
 1. Manual refresh: Click refresh button in dashboard
 2. Set auto-refresh: Edit dashboard metadata
 3. Clear cache: **Settings** → **Manage** → **Clear cache**
@@ -351,6 +357,7 @@ Update `json_metadata`:
 **Issue:** Trino queries timeout
 
 **Solutions:**
+
 1. Increase timeout: Edit database connection → **SQL Lab** → increase timeout
 2. Optimize queries: Add partition filters
 3. Check Trino resources: Ensure sufficient memory/CPU

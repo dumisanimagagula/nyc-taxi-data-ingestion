@@ -152,10 +152,12 @@ SELECT * FROM iceberg.gold.daily_trip_stats LIMIT 10;
 1. [ ] Create SQL file in `gold/models/analytics/`
 2. [ ] Define schema in `gold/models/schema.yml`
 3. [ ] Run dbt:
+
 ```powershell
 docker exec lakehouse-dbt dbt run --profiles-dir /usr/app
 ```
-4. [ ] Query new model in Trino
+
+1. [ ] Query new model in Trino
 
 ## ☑️ Troubleshooting
 
@@ -208,7 +210,8 @@ docker ps | grep trino
 docker logs lakehouse-trino
 ```
 
-3. [ ] Verify Iceberg catalog:
+1. [ ] Verify Iceberg catalog:
+
 ```powershell
 docker exec -it lakehouse-trino trino --execute "SHOW CATALOGS"
 ```text

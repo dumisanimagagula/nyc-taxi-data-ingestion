@@ -109,6 +109,7 @@ zones:
 ```
 
 **Usage**:
+
 ```bash
 
 # Zones are ingested automatically first when zones.enabled=true

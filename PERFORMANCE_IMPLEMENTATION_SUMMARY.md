@@ -11,10 +11,12 @@ All performance optimization concerns have been addressed through configuration-
 ### 1. **Bronze Layer Partitioning** ✅
 
 **Files Modified**:
+
 - `config/pipelines/lakehouse_config.yaml` - Added partition configuration
 - `bronze/ingestors/ingest_to_iceberg.py` - Enhanced partition column handling
 
 **Changes**:
+
 ```yaml
 # BEFORE
 storage:
@@ -26,6 +28,7 @@ storage:
 ```
 
 **Benefits**:
+
 - 50-80% faster queries for date-range filters
 - Partition pruning eliminates 92% I/O for single-month queries
 - Enables partition-level caching
@@ -36,10 +39,12 @@ storage:
 ### 2. **Optimized Chunk Sizes** ✅
 
 **Files Modified**:
+
 - `config/pipelines/lakehouse_config.yaml` - Reduced chunk size
 - `bronze/ingestors/ingest_to_iceberg.py` - Implemented smart chunking
 
 **Changes**:
+
 ```yaml
 # BEFORE
 ingestion:
@@ -53,11 +58,13 @@ ingestion:
 ```
 
 **Memory Calculation**:
+
 - 50,000 rows × 100 bytes/row = 5MB per chunk
 - 10 concurrent chunks × 5MB = 50MB (within safe limits)
 - Safe for 4GB Spark executors
 
 **Progressive Chunking Logic**:
+
 ```python
 # For large datasets: write in chunks
 for i in range(0, len(df), chunk_size):
@@ -68,6 +75,7 @@ for i in range(0, len(df), chunk_size):
 ```
 
 **Benefits**:
+
 - Zero OOM errors on any dataset size
 - 12M row ingestion completes successfully
 - Visible progress for large imports
@@ -78,10 +86,12 @@ for i in range(0, len(df), chunk_size):
 ### 3. **Caching Strategy** ✅
 
 **Files Modified**:
+
 - `config/pipelines/lakehouse_config.yaml` - Added caching configuration
 - `silver/jobs/bronze_to_silver.py` - Implemented Bronze and transform caching
 
 **Configuration Added**:
+
 ```yaml
 silver:
   performance:
@@ -97,6 +107,7 @@ silver:
 **Caching Implementation**:
 
 **Bronze Read Caching**:
+
 ```python
 def _read_bronze(self) -> DataFrame:
     df = self.spark.table(table_identifier)
@@ -106,6 +117,7 @@ def _read_bronze(self) -> DataFrame:
 ```
 
 **Transform Caching**:
+
 ```python
 def _apply_transformations(self, df: DataFrame) -> DataFrame:
     # ... add partition columns ...
@@ -114,6 +126,7 @@ def _apply_transformations(self, df: DataFrame) -> DataFrame:
 ```
 
 **Benefits**:
+
 - 10-50x faster: Cached vs. remote reads
 - 30-40% CPU reduction
 - Cold cache (first run): 10s
@@ -125,6 +138,7 @@ def _apply_transformations(self, df: DataFrame) -> DataFrame:
 ### 4. **Materialized Views in Gold Layer** ✅
 
 **Files Modified**:
+
 - `config/pipelines/lakehouse_config.yaml` - Added materialization config
 - `gold/models/analytics/daily_trip_stats.sql` - Incremental materialized view
 - `gold/models/analytics/hourly_location_analysis.sql` - Materialized with indexes
@@ -133,6 +147,7 @@ def _apply_transformations(self, df: DataFrame) -> DataFrame:
 **Strategy by Table**:
 
 #### **daily_trip_stats** - Incremental Refresh
+
 ```sql
 {{
   config(
@@ -150,12 +165,14 @@ def _apply_transformations(self, df: DataFrame) -> DataFrame:
 ```
 
 **Benefits**:
+
 - 85-95% faster refreshes (only processes new data)
 - 7-day lookback for late arrivals
 - Atomic Iceberg MERGE for consistency
 - 12M table refreshes in 30s instead of 5 minutes
 
 #### **hourly_location_analysis** - Materialized Table
+
 ```sql
 {{
   config(
@@ -169,11 +186,13 @@ def _apply_transformations(self, df: DataFrame) -> DataFrame:
 ```
 
 **Benefits**:
+
 - Faster: ~365K rows completes in <1 minute
 - Indexed: Common query patterns optimized
 - Simple semantics: Clear materialization
 
 #### **revenue_by_payment_type** - Incremental Partitioned
+
 ```sql
 {{
   config(
@@ -192,11 +211,13 @@ def _apply_transformations(self, df: DataFrame) -> DataFrame:
 ```
 
 **Benefits**:
+
 - Partition pruning: Only updates relevant periods
 - Clustering: Scans faster by payment type
 - 1-2 minute refresh for full year
 
 **Overall Gold Layer Results**:
+
 - 85-95% faster incremental updates
 - Late arrival handling (7-day window)
 - Pre-aggregated instant query access
@@ -237,7 +258,7 @@ performance:
 ## Performance Metrics - Before & After
 
 | **Metric** | **Before** | **After** | **Improvement** |
-|-----------|-----------|----------|-----------------|
+| --------- | --------- | -------- | --------------- |
 | **Bronze Query** | 10.5s | 2.1s | **5x faster** |
 | **Silver Transform** | 45.2s | 8.3s | **5x faster** |
 | **Gold Aggregation** | 280.1s | 32.5s | **8.6x faster** |
@@ -252,27 +273,35 @@ performance:
 ## Key Features by Issue
 
 ### ❌ Issue: No Partitioning in Bronze
-✅ **FIXED**: 
+
+✅ **FIXED**:
+
 - Partition by year/month automatically added
 - Partition pruning reduces I/O by 92%
 - Date range queries 5-10x faster
 
-### ❌ Issue: Large Chunk Sizes 
+### ❌ Issue: Large Chunk Sizes
+
 ✅ **FIXED**:
+
 - Chunk size reduced from 100k → 50k
 - OOM errors eliminated
 - Safe on all executor sizes
 - Progressive chunking shows status
 
 ### ❌ Issue: No Caching in Spark
+
 ✅ **FIXED**:
+
 - Bronze table cached after read
 - Transform results cached after partitioning
 - 10-50x faster for repeated queries
 - MEMORY_AND_DISK for safety
 
 ### ❌ Issue: No Materialized Views
+
 ✅ **FIXED**:
+
 - daily_trip_stats: Incremental (85-95% faster)
 - hourly_location_analysis: Full refresh with indexes
 - revenue_by_payment_type: Incremental partitioned
@@ -302,6 +331,7 @@ All optimizations are **purely configuration-based**:
 **New File**: `docs/PERFORMANCE_OPTIMIZATION.md`
 
 Comprehensive guide including:
+
 - ✅ Issue analysis and solutions
 - ✅ Implementation details with code examples
 - ✅ Configuration reference for all settings
@@ -316,6 +346,7 @@ Comprehensive guide including:
 ## Quick Reference
 
 ### Bronze Optimization
+
 ```yaml
 bronze:
   target:
@@ -329,6 +360,7 @@ bronze:
 ```
 
 ### Silver Optimization
+
 ```yaml
 silver:
   performance:
@@ -340,6 +372,7 @@ silver:
 ```
 
 ### Gold Optimization
+
 ```yaml
 gold:
   models:
@@ -351,6 +384,7 @@ gold:
 ```
 
 ### Global Performance
+
 ```yaml
 performance:
   spark:
@@ -370,6 +404,7 @@ performance:
 ## Testing & Validation
 
 ✅ **All optimizations verified**:
+
 - Partitioning: Verified in Iceberg table schema
 - Chunking: Tested with 12M row datasets
 - Caching: Memory usage monitored
@@ -381,17 +416,20 @@ performance:
 ## Next Steps (Optional)
 
 ### Monitoring Enhancements
+
 - [ ] Add Prometheus metrics endpoint
 - [ ] Create Grafana dashboard for pipeline metrics
 - [ ] Set up alerts for slow queries (>5s)
 
 ### Advanced Optimizations
+
 - [ ] Z-order clustering for data skipping
 - [ ] Photon acceleration (if available)
 - [ ] Query result caching in Trino
 - [ ] Data compaction scheduling
 
 ### Operational
+
 - [ ] Schedule daily Gold layer refreshes
 - [ ] Monitor partition skipping ratios
 - [ ] Track cache hit rates

@@ -33,6 +33,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 ### 1. Core DAG Implementation
 
 **`airflow/dags/nyc_taxi_medallion_dag.py`** (440 lines)
+
 - Complete rewrite of orchestration layer
 - TaskGroups: preflight_checks, bronze_ingestion, silver_transformation, gold_aggregation
 - Health checks: Spark master, Hive Metastore, MinIO storage
@@ -42,6 +43,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 - Environment-aware execution
 
 **Key Features**:
+
 - 11 externalized Airflow Variables
 - 3 parallel health check sensors (300s timeout, 30s poke interval)
 - Dynamic ingestion tasks per enabled dataset
@@ -52,6 +54,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 ### 2. DAG Factory Pattern
 
 **`airflow/dags/dag_factory.py`** (451 lines)
+
 - Reusable factory for creating medallion DAGs
 - Auto-discovers YAML configs in `config/dags/`
 - Generates complete DAGs from configuration
@@ -59,6 +62,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 - Single source of truth for DAG logic
 
 **Benefits**:
+
 - Add new pipelines without duplicating code
 - All pipelines follow same patterns
 - Easy to maintain and update
@@ -67,6 +71,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 ### 3. Configuration Files
 
 **`config/datasets/datasets.yaml`** (100 lines)
+
 - 4 dataset configurations (yellow_taxi, green_taxi, fhv_taxi, taxi_zones)
 - 2 enabled datasets (yellow_taxi, green_taxi, taxi_zones)
 - 1 disabled dataset (fhv_taxi) - enable by changing flag
@@ -76,6 +81,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 - Scheduling preferences per dataset
 
 **`config/dags/nyc_taxi_pipeline.yaml`** (150 lines)
+
 - Example DAG factory configuration
 - Complete pipeline definition in YAML
 - Layer configurations (bronze/silver/gold)
@@ -85,18 +91,21 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 - Environment overrides
 
 **`config/airflow/variables_dev.json`** (14 variables)
+
 - Development environment configuration
 - ENABLE_DATA_QUALITY: false (fast iteration)
 - ENABLE_LINEAGE: false
 - Development-appropriate credentials
 
 **`config/airflow/variables_staging.json`** (14 variables)
+
 - Staging environment configuration
 - ENABLE_DATA_QUALITY: true (validation)
 - ENABLE_LINEAGE: true
 - Staging credentials and endpoints
 
 **`config/airflow/variables_prod.json`** (14 variables)
+
 - Production environment configuration
 - ENABLE_DATA_QUALITY: true (strict)
 - ENABLE_LINEAGE: true
@@ -106,6 +115,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 ### 4. Comprehensive Documentation
 
 **`docs/AIRFLOW_DAG_DESIGN.md`** (850 lines)
+
 - Complete guide to new DAG design
 - Architecture diagrams and flow charts
 - Configuration reference for all variables
@@ -119,6 +129,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 - Security best practices
 
 **`docs/AIRFLOW_SETUP.md`** (450 lines)
+
 - Quick reference guide (5-minute setup)
 - All required commands for setup
 - Variable management reference
@@ -133,6 +144,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 - Backup and recovery procedures
 
 **`docs/DATASETS_CONFIG.md`** (650 lines)
+
 - Complete datasets.yaml reference
 - Field-by-field documentation
 - Pattern variable reference
@@ -146,6 +158,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 ### 5. Comprehensive Tests
 
 **`tests/airflow/test_dag_Production Version_validation.py`** (480 lines)
+
 - 40+ tests across 9 test classes
 - DAG structure validation
 - TaskGroup verification
@@ -159,6 +172,7 @@ Successfully implemented **6. Airflow DAG Design 🔄** improvements, addressing
 - Integration test stubs
 
 **Test Coverage**:
+
 - ✅ DAG loads without import errors
 - ✅ Schedule interval, catchup, max_active_runs
 - ✅ Default args (owner, retries, email)
@@ -243,7 +257,7 @@ Benefits:
 ### Airflow Variables (11 total)
 
 | Variable | Purpose | Dev Value | Prod Value |
-|----------|---------|-----------|------------|
+| -------- | ------- | --------- | ---------- |
 | `AIRFLOW_ENV` | Environment identifier | `dev` | `prod` |
 | `CONFIG_BASE_PATH` | Base config path | `/app/config` | `/app/config` |
 | `PIPELINE_CONFIG_PATH` | Pipeline YAML path | `/app/config/pipelines/lakehouse_config.yaml` | Same |
@@ -262,6 +276,7 @@ Benefits:
 ### Airflow Connections
 
 **`spark_default`** (SparkSubmitOperator connection):
+
 - Type: `spark`
 - Host: `spark-master` (dev) or `yarn-master` (prod)
 - Port: `7077`
@@ -280,6 +295,7 @@ Benefits:
 - **MinIO Storage**: HTTP health endpoint check (/minio/health/live)
 
 **Configuration**:
+
 - Timeout: 300 seconds (5 minutes)
 - Poke interval: 30 seconds
 - Mode: poke (blocks task slot)
@@ -306,6 +322,7 @@ Benefits:
 ### Unit Tests (40+ tests)
 
 **Test Classes**:
+
 1. `TestDAGStructure` - DAG configuration, schedule, catchup, tags, default args
 2. `TestTaskGroups` - TaskGroup existence and structure
 3. `TestHealthChecks` - Health check functions with mocked connections
@@ -317,6 +334,7 @@ Benefits:
 9. `TestEnvironmentConfiguration` - Environment-specific settings
 
 **Test Markers**:
+
 - `@pytest.mark.integration` - Require running infrastructure
 - Standard tests - Run with mocks
 

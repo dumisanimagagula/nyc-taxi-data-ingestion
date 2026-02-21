@@ -205,6 +205,7 @@ Configurations are merged using **deep merge** strategy:
 **Example:**
 
 Base config:
+
 ```yaml
 infrastructure:
   spark:
@@ -259,12 +260,14 @@ Defaults are supported: `${VAR:-default_value}`
 All configurations are validated against JSON schemas stored in `config/schemas/`.
 
 **Schema Version Mapping:**
+
 - Config version `1.0` → `lakehouse_config_schema_v1.json`
 - Future versions will have corresponding schemas
 
 ### Validation Modes
 
 **Permissive (default)**: Log warnings but continue
+
 ```python
 config = load_lakehouse_config(validate=True, strict=False)
 ```text
@@ -299,6 +302,7 @@ python scripts/validate_config.py --verbose
 ### Common Validation Errors
 
 **Missing required field:**
+
 ```text
 ✗ 'version' is a required property at root
 ```text
@@ -308,9 +312,11 @@ python scripts/validate_config.py --verbose
 ```text
 ✗ 'invalid_type' is not one of ['yellow', 'green', 'fhv'] at bronze.data_sources[0].taxi_type
 ```
+
 **Fix**: Use one of the allowed values
 
 **Type mismatch:**
+
 ```text
 ✗ 100000 is not of type 'string' at bronze.ingestion.chunk_size
 ```text
@@ -404,6 +410,7 @@ pipeline:
 ### 2. Use Environment Variables for Secrets
 
 ✅ **Good:**
+
 ```yaml
 infrastructure:
   s3:
@@ -451,6 +458,7 @@ bronze:
 ```
 
 **Development** (environments/development.yaml):
+
 ```yaml
 bronze:
   ingestion:
@@ -511,6 +519,7 @@ LAKEHOUSE_ENV=production python scripts/validate_config.py
 Load lakehouse configuration with validation and environment support.
 
 **Signature:**
+
 ```python
 def load_lakehouse_config(
     config_name: str = 'lakehouse_config.yaml',
@@ -587,6 +596,7 @@ def get_config_info(config: Dict[str, Any]) -> Dict[str, Any]
 Full-featured configuration loader with validation, versioning, and environment support.
 
 **Constructor:**
+
 ```python
 def __init__(
     self,
@@ -733,6 +743,7 @@ class MyPipeline:
 ```
 
 **After:**
+
 ```python
 from src.config_loader import load_lakehouse_config
 from pathlib import Path

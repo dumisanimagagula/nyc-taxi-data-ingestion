@@ -10,7 +10,7 @@ This project uses a **configuration-driven pattern** inspired by modern data eng
 
 ## Why This Matters
 
-### Before (Arguments-Based):
+### Before (Arguments-Based)
 
 ```bash
 python ingest_nyc_taxi_data.py \
@@ -56,6 +56,7 @@ data_source:
 ```
 
 **Run:**
+
 ```bash
 python ingest_nyc_taxi_data.py
 ```text
@@ -89,11 +90,13 @@ ingestion:
 ### 5. Use Multiple Configs for Different Environments
 
 Create separate config files:
+
 - `config.dev.yaml` (local development)
 - `config.prod.yaml` (production)
 - `config.staging.yaml` (staging)
 
 Run with different configs:
+
 ```bash
 
 # Development
@@ -159,6 +162,7 @@ database:
 ```
 
 PostgreSQL connection string format:
+
 - `postgresql://[user[:password]@][host][:port][/database]`
 
 ### `ingestion` Section
@@ -196,7 +200,8 @@ To add new parameters:
      param: "value"
    ```
 
-2. **Update `config_loader.py`:**
+1. **Update `config_loader.py`:**
+
    ```python
    @dataclass
    class MyFeatureConfig:
@@ -208,7 +213,8 @@ To add new parameters:
        my_feature: MyFeatureConfig
    ```
 
-3. **Use in `ingest_nyc_taxi_data.py`:**
+2. **Use in `ingest_nyc_taxi_data.py`:**
+
    ```python
    if cfg.my_feature.enabled:
        # Do something with cfg.my_feature.param
@@ -222,6 +228,7 @@ To add new parameters:
 ```text
 FileNotFoundError: Configuration file not found: config.yaml
 ```
+
 **Solution:** Make sure `config.yaml` exists in the working directory.
 
 ### Invalid YAML syntax
@@ -236,6 +243,7 @@ yaml.YAMLError: ...
 ```text
 TypeError: __init__() missing 1 required positional argument: 'year'
 ```
+
 **Solution:** Ensure all required fields exist in config.yaml (data_source, database, etc.).
 
 ### Database connection fails

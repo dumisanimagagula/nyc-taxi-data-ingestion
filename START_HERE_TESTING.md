@@ -161,11 +161,13 @@ reports = terminal, HTML (htmlcov/), XML (coverage.xml)
 ### conftest.py - Shared Test Infrastructure
 
 **Session-Scoped** (reused across all tests):
+
 - `spark_session` - SparkSession(local[2], in-memory)
 - `faker_instance` - Faker for test data generation
 - `test_data_dir` - Temporary directory with auto-cleanup
 
 **Function-Scoped** (fresh per test):
+
 - `sample_taxi_data` - 100 realistic NYC taxi records
 - `sample_taxi_data_with_quality_issues` - With intentional flaws
 - `sample_lakehouse_config` - Complete medallion config
@@ -179,7 +181,7 @@ reports = terminal, HTML (htmlcov/), XML (coverage.xml)
 ## 📈 Test Statistics
 
 | Metric | Value |
-|--------|-------|
+| ------ | ----- |
 | Total Tests | 70 |
 | Unit Tests | 37 |
 | Integration Tests | 6 |
@@ -307,6 +309,7 @@ class TestMyComponent:
 ## 🔍 Architecture Coverage
 
 ```
+
 Bronze Layer (Ingestion)
 ├─ Schema validation ✅
 ├─ Type casting ✅
@@ -341,6 +344,7 @@ Airflow
 ├─ DAG structure ✅
 ├─ Dependencies ✅
 └─ Configuration ✅
+
 ```text
 
 ---

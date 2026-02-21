@@ -2,7 +2,7 @@
 
 ## Overview
 
-This platform implements a **medallion architecture** (Bronze → Silver → Gold) using modern open-source data tools. The key principle is **separation of concerns**: Airflow controls *when* things run, not *how* data is transformed.
+This platform implements a **medallion architecture** (Bronze → Silver → Gold) using modern open-source data tools. The key principle is **separation of concerns**: Airflow controls _when_ things run, not _how_ data is transformed.
 
 ## Architecture Layers
 
@@ -174,7 +174,7 @@ FROM {{ source('silver', 'nyc_taxi_clean') }}
 GROUP BY year, month, day_of_week, pickup_location_id
 ```
 
-### Configuration
+### Gold Configuration
 
 ```yaml
 gold:
@@ -187,7 +187,7 @@ gold:
             expression: count(*)
           - name: avg_fare
             expression: avg(fare_amount)
-```text
+```
 
 ## Orchestration Layer (Airflow)
 
@@ -219,10 +219,7 @@ ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
 3. **BashOperator**: Run dbt commands
 4. **PythonOperator**: Data quality checks
 
-### Configuration
-
-```yaml
-orchestration:
+### Orchestration Configuration
   dag:
     schedule_interval: "0 2 * * *"  # Daily at 2 AM
 
@@ -250,6 +247,7 @@ orchestration:
 ### Bucket Structure
 
 ```
+
 minio/
 ├── bronze/          # Raw data
 
@@ -460,6 +458,7 @@ transformations:
 ---
 
 **This architecture is designed to be**:
+
 - ✅ **Scalable**: Handles growing data volumes
 - ✅ **Maintainable**: Config-driven, no code changes
 - ✅ **Testable**: Quality checks at every layer
