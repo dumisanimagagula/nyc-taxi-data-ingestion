@@ -435,6 +435,7 @@ services:
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY:-thisIsASecretKey_Change_In_Production_12345}
       _AIRFLOW_DB_MIGRATE: 'true'
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USERNAME:-airflow}
@@ -479,6 +480,9 @@ services:
       AIRFLOW__CORE__TASK_EXECUTION_TIMEOUT: '7200'
       AIRFLOW__WEBSERVER__WORKERS: '2'
       AIRFLOW__WEBSERVER__WORKER_TIMEOUT: '240'
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY:-thisIsASecretKey_Change_In_Production_12345}
+      AIRFLOW__LOGGING__WORKER_LOG_SERVER_HOST: airflow-webserver
+      AIRFLOW__LOGGING__WORKER_LOG_SERVER_PORT: '8793'
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
       SPARK_HOME: /opt/spark
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
@@ -496,6 +500,7 @@ services:
       - ./docker-init-scripts/hive-site.xml:/opt/hadoop/conf/hive-site.xml:ro
     ports:
       - "${AIRFLOW_PORT:-8089}:8080"
+      - "8793:8793"
     command: webserver
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
@@ -537,6 +542,9 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
       AIRFLOW__CORE__TASK_EXECUTION_TIMEOUT: '7200'
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY:-thisIsASecretKey_Change_In_Production_12345}
+      AIRFLOW__LOGGING__WORKER_LOG_SERVER_HOST: airflow-webserver
+      AIRFLOW__LOGGING__WORKER_LOG_SERVER_PORT: '8793'
       HIVE_METASTORE_URI: thrift://hive-metastore:9083
       SPARK_HOME: /opt/spark
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
