@@ -21,7 +21,7 @@ infrastructure:
     secret_key: "minio123"
   
   metastore:
-    uri: "thrift://localhost:9083"
+    uri: "thrift://hive-metastore:9083"
   
   spark:
     master: "local[*]"

@@ -69,6 +69,7 @@ class SilverTransformer:
         spark_config = self.config.get('infrastructure', {}).get('spark', {})
         s3_config = self.config.get('infrastructure', {}).get('s3', {})
         metastore_config = self.config.get('infrastructure', {}).get('metastore', {})
+        metastore_uri = metastore_config.get('uri', 'thrift://hive-metastore:9083')
         
         spark = (SparkSession.builder
             .appName(spark_config.get('app_name', 'silver-transformation'))
@@ -80,7 +81,9 @@ class SilverTransformer:
             .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
             .config("spark.sql.catalog.lakehouse", "org.apache.iceberg.spark.SparkCatalog")
             .config("spark.sql.catalog.lakehouse.type", "hive")
-            .config("spark.sql.catalog.lakehouse.uri", metastore_config.get('uri', 'thrift://hive-metastore:9083'))
+            .config("spark.sql.catalog.lakehouse.uri", metastore_uri)
+            .config("hive.metastore.uris", metastore_uri)
+            .config("spark.hadoop.hive.metastore.uris", metastore_uri)
             
             # S3/MinIO configuration
             .config("spark.hadoop.fs.s3a.endpoint", s3_config.get('endpoint', 'http://minio:9000'))

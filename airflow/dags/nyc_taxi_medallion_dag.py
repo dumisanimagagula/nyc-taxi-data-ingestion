@@ -79,6 +79,8 @@ SPARK_CONF = {
     "spark.sql.catalog.lakehouse": "org.apache.iceberg.spark.SparkCatalog",
     "spark.sql.catalog.lakehouse.type": "hive",
     "spark.sql.catalog.lakehouse.uri": HIVE_METASTORE_URI,
+    "hive.metastore.uris": HIVE_METASTORE_URI,
+    "spark.hadoop.hive.metastore.uris": HIVE_METASTORE_URI,
     "spark.sql.defaultCatalog": "lakehouse",
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
     "spark.hadoop.fs.s3a.endpoint": MINIO_ENDPOINT,
