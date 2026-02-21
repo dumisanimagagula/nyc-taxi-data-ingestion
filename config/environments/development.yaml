@@ -16,7 +16,7 @@ pipeline:
 # Development-specific infrastructure
 infrastructure:
   s3:
-    endpoint: "http://localhost:9000"
+    endpoint: "http://minio:9000"
     access_key: "minio"
     secret_key: "minio123"
   
