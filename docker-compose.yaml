@@ -1,6 +1,9 @@
 networks:
   lakehouse-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
 
 volumes:
   # Storage
@@ -418,7 +421,8 @@ services:
         max-file: ${LOG_MAX_FILE:-3}
     restart: ${RESTART_POLICY:-unless-stopped}
     networks:
-      - lakehouse-net
+      lakehouse-net:
+        ipv4_address: 172.26.0.4
 
   airflow-init:
     build:
@@ -430,7 +434,7 @@ services:
         condition: service_healthy
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@172.26.0.4:5432/${AIRFLOW_DB_NAME:-airflow}
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -472,7 +476,7 @@ services:
         condition: service_started
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@172.26.0.4:5432/${AIRFLOW_DB_NAME:-airflow}
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -487,6 +491,7 @@ services:
       SPARK_HOME: /opt/spark
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       HADOOP_CONF_DIR: /opt/hadoop/conf
+      PYTHONPATH: /opt/airflow:/opt/airflow/src
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - airflow-logs:/opt/airflow/logs
@@ -536,7 +541,7 @@ services:
         condition: service_started
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@172.26.0.4:5432/${AIRFLOW_DB_NAME:-airflow}
       AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -549,6 +554,7 @@ services:
       SPARK_HOME: /opt/spark
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       HADOOP_CONF_DIR: /opt/hadoop/conf
+      PYTHONPATH: /opt/airflow:/opt/airflow/src
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - airflow-logs:/opt/airflow/logs
