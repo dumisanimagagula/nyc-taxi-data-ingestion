@@ -142,6 +142,8 @@ docker compose up -d
 
 ```
 
+Note: If you pulled changes that pin `airflow-db` to a static IP, run `docker compose down` once so Docker can recreate the network before starting again.
+
 ### 2. Initialize Platform
 
 ```powershell

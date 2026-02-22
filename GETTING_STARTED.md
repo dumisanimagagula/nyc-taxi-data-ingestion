@@ -47,6 +47,8 @@ docker compose up -d
 
 ```text
 
+Note: If you upgraded to a version that pins `airflow-db` to a static IP, run `docker compose down` once so Docker recreates the network before starting again.
+
 ### 4. Wait for Services
 
 ```powershell

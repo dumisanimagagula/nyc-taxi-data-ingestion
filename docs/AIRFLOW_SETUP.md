@@ -73,6 +73,11 @@ docker exec lakehouse-airflow airflow dags unpause nyc_taxi_medallion_pipeline
 docker exec lakehouse-airflow airflow dags trigger nyc_taxi_medallion_pipeline
 ```text
 
+### Docker Compose Notes
+
+- Airflow containers set `PYTHONPATH=/opt/airflow:/opt/airflow/src` to load project modules (for example, lineage tracking).
+- `airflow-db` uses a static IP (`172.26.0.4`). If your Docker network was created before this change, run `docker compose down` once and start again so the network is recreated.
+
 ---
 
 ## Detailed Configuration
