@@ -3,7 +3,7 @@
 # This configuration file is used by the DAG factory to generate an Airflow DAG
 
 dag:
-  id: nyc_taxi_medallion_pipeline
+  id: nyc_taxi_medallion_pipeline_factory
   description: "NYC Taxi data lakehouse pipeline with medallion architecture"
   schedule: "0 2 * * *"  # Daily at 2 AM
   start_date: "2024-01-01"
