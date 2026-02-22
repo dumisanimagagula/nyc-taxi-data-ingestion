@@ -352,7 +352,7 @@ with DAG(
 
     run_data_quality_checks = SparkSubmitOperator(
         task_id="run_data_quality_checks",
-        application="/opt/spark/jobs/run_data_quality.py",
+        application="/opt/airflow/silver/jobs/run_data_quality.py",
         conn_id="spark_default",
         conf=SPARK_CONF,
         packages=",".join(SPARK_PACKAGES),

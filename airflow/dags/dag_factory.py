@@ -147,7 +147,7 @@ class MedallionDAGFactory:
                 if dataset.get("enabled", True):
                     SparkSubmitOperator(
                         task_id=f"transform_{dataset['name']}",
-                        application=silver_config.get("application", "/opt/spark/jobs/bronze_to_silver.py"),
+                        application=silver_config.get("application", "/opt/airflow/silver/jobs/bronze_to_silver.py"),
                         conn_id=self.config.get("spark", {}).get("conn_id", "spark_default"),
                         conf=spark_conf,
                         packages=",".join(self.config.get("spark", {}).get("packages", [])),
@@ -174,7 +174,7 @@ class MedallionDAGFactory:
 
             SparkSubmitOperator(
                 task_id="build_gold_models",
-                application=gold_config.get("application", "/opt/spark/jobs/build_gold_layer.py"),
+                application=gold_config.get("application", "/opt/airflow/gold/jobs/build_gold_layer.py"),
                 conn_id=self.config.get("spark", {}).get("conn_id", "spark_default"),
                 conf=spark_conf,
                 packages=",".join(self.config.get("spark", {}).get("packages", [])),
@@ -201,7 +201,7 @@ class MedallionDAGFactory:
 
                 SparkSubmitOperator(
                     task_id="run_quality_checks",
-                    application=dq_config.get("application", "/opt/spark/jobs/run_data_quality.py"),
+                    application=dq_config.get("application", "/opt/airflow/silver/jobs/run_data_quality.py"),
                     conn_id=self.config.get("spark", {}).get("conn_id", "spark_default"),
                     conf=spark_conf,
                     packages=",".join(self.config.get("spark", {}).get("packages", [])),
@@ -339,7 +339,7 @@ def create_dags_from_configs():
 
     Place YAML files in config/dags/ and they will automatically become DAGs
     """
-    config_dir = Variable.get("DAG_CONFIG_DIR", default_var="/app/config/dags")
+    config_dir = Variable.get("DAG_CONFIG_DIR", default_var="/opt/airflow/config/dags")
 
     if not os.path.exists(config_dir):
         print(f"Config directory not found: {config_dir}")

@@ -44,7 +44,7 @@ spark:
     spark.hadoop.fs.s3a.path.style.access: "true"
 
 # Pipeline configuration path
-pipeline_config_path: /app/config/pipelines/lakehouse_config.yaml
+pipeline_config_path: /opt/airflow/config/pipelines/lakehouse_config.yaml
 
 # Health checks to perform before execution
 health_checks:
@@ -82,7 +82,7 @@ layers:
   
   # Silver Layer Configuration
   silver:
-    application: /opt/spark/jobs/bronze_to_silver.py
+    application: /opt/airflow/silver/jobs/bronze_to_silver.py
     datasets:
       - name: yellow_taxi
         enabled: true
@@ -105,7 +105,7 @@ layers:
   
   # Gold Layer Configuration
   gold:
-    application: /opt/spark/jobs/build_gold_layer.py
+    application: /opt/airflow/gold/jobs/build_gold_layer.py
     models:
       - daily_trip_stats
       - hourly_location_analysis
@@ -114,7 +114,7 @@ layers:
 # Data Quality Configuration
 data_quality:
   enabled: true
-  application: /opt/spark/jobs/run_data_quality.py
+  application: /opt/airflow/silver/jobs/run_data_quality.py
   fail_on_error: true
   checks:
     - null_checks
