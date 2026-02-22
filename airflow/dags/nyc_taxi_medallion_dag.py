@@ -450,7 +450,7 @@ def _update_lineage_tracking(context):
 
     from pyspark.sql import SparkSession
 
-    from src.data_quality.lineage import LineageTracker
+    from src.data_quality.lineage import LineageEventType, LineageTracker
 
     spark = SparkSession.builder.getOrCreate()
 
@@ -465,12 +465,12 @@ def _update_lineage_tracking(context):
             source_table="bronze.nyc_taxi_raw",
             target_table="silver.nyc_taxi_clean",
             layer="silver",
-            event_type="TRANSFORMATION",
+            event_type=LineageEventType.TRANSFORMATION,
             source_row_count=context.get("ti").xcom_pull(task_ids="bronze_ingestion"),
             target_row_count=context.get("ti").xcom_pull(task_ids="silver_transformation"),
         )
 
-        tracker.persist_lineage()
+        tracker.persist_to_iceberg()
         print("✓ Lineage tracking updated successfully")
 
     finally:
