@@ -18,7 +18,7 @@ Comprehensive testing infrastructure implemented for NYC Taxi Data Lakehouse wit
 
 ### For Complete Guide
 
-→ **[docs/TESTING.md](docs/TESTING.md)** - Full testing documentation (520 lines)
+→ **[docs/TESTING.md](TESTING.md)** - Full testing documentation (520 lines)
 
 ### For Implementation Details
 
@@ -76,7 +76,7 @@ open htmlcov/index.html
 ### Complete Documentation
 
 1. **QUICK_TEST_REFERENCE.md** - Developer quick start
-2. **docs/TESTING.md** - Complete testing guide (520 lines)
+2. **TESTING.md** - Complete testing guide (520 lines)
 3. **TESTING_ARCHITECTURE.md** - Visual diagrams
 4. **TESTING_IMPLEMENTATION.md** - Implementation summary
 5. **TESTING_COMPLETE_VERIFICATION.md** - Deliverables checklist
@@ -254,7 +254,7 @@ pytest -m "not slow" --cov=src --cov=bronze --cov=silver --cov=gold
 |----------|---------|--------|
 | [QUICK_TEST_REFERENCE.md](QUICK_TEST_REFERENCE.md) | Common commands | 1-minute read |
 | [TESTING_ARCHITECTURE.md](TESTING_ARCHITECTURE.md) | Visual diagrams | 10-minute read |
-| [docs/TESTING.md](docs/TESTING.md) | Complete guide | 20-minute read |
+| [docs/TESTING.md](TESTING.md) | Complete guide | 20-minute read |
 | [TESTING_IMPLEMENTATION.md](TESTING_IMPLEMENTATION.md) | What was built | 10-minute read |
 | [TESTING_COMPLETE_VERIFICATION.md](TESTING_COMPLETE_VERIFICATION.md) | Verification | 15-minute read |
 
@@ -384,9 +384,9 @@ Airflow
 | See coverage | `pytest --cov=src --cov=bronze ... --cov-report=html` |
 | Run specific test | `pytest tests/unit/test_spark_jobs.py::TestClassName::test_name` |
 | Learn test structure | Read [TESTING_ARCHITECTURE.md](TESTING_ARCHITECTURE.md) |
-| Write a new test | See [docs/TESTING.md](docs/TESTING.md) "Writing Tests" |
-| Understand coverage | See [docs/TESTING.md](docs/TESTING.md) "Coverage" section |
-| Troubleshoot | See [docs/TESTING.md](docs/TESTING.md) "Troubleshooting" |
+| Write a new test | See [docs/TESTING.md](TESTING.md) "Writing Tests" |
+| Understand coverage | See [docs/TESTING.md](TESTING.md) "Coverage" section |
+| Troubleshoot | See [docs/TESTING.md](TESTING.md) "Troubleshooting" |
 
 ---
 

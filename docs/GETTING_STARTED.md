@@ -223,8 +223,8 @@ docker exec -it lakehouse-trino trino --execute "SHOW CATALOGS"
 ### Explore the Platform
 
 - [ ] Read [README.md](README.md) for overview
-- [ ] Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for deep dive
-- [ ] Read [docs/QUICK_START.md](docs/QUICK_START.md) for quick reference
+- [ ] Read [docs/ARCHITECTURE.md](ARCHITECTURE.md) for deep dive
+- [ ] Read [docs/QUICK_START.md](QUICK_START.md) for quick reference
 - [ ] Experiment with config changes
 
 ### Build Something
@@ -326,7 +326,7 @@ Once all items are checked, you have a fully functional data platform!
 
 **Need Help?**
 - Check [TRANSFORMATION_SUMMARY.md](TRANSFORMATION_SUMMARY.md) for what was built
-- Review [docs/QUICK_START.md](docs/QUICK_START.md) for quick reference
+- Review [docs/QUICK_START.md](QUICK_START.md) for quick reference
 - Check service logs for errors
 - Verify configuration in `lakehouse_config.yaml`
 
