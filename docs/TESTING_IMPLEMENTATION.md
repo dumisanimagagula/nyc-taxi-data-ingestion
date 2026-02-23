@@ -224,7 +224,7 @@ tests/unit/__init__.py
 tests/integration/__init__.py
 tests/e2e/__init__.py
 tests/airflow/__init__.py
-```text
+```
 
 ## Test Statistics
 
@@ -262,8 +262,7 @@ pytest -m requires_docker  # Requires Docker
 pytest -m requires_s3      # Requires S3/MinIO
 
 pytest -m requires_metastore # Requires Hive Metastore
-
-```text
+```
 
 ## Key Features Implemented
 
@@ -314,17 +313,13 @@ pytest -m requires_metastore # Requires Hive Metastore
 ### Quick Start
 
 ```bash
-
 # All tests
-
 pytest
 
 # Fast tests only (exclude slow)
-
 pytest -m "not slow"
 
 # By category
-
 pytest -m unit          # ~1s
 
 pytest -m integration   # ~5s
@@ -332,7 +327,6 @@ pytest -m integration   # ~5s
 pytest -m e2e          # ~20s
 
 pytest -m airflow      # ~1s
-
 ```
 
 ### With Coverage
@@ -340,26 +334,23 @@ pytest -m airflow      # ~1s
 ```bash
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
 open htmlcov/index.html
-```text
+```
 
 ### Parallel Execution
 
 ```bash
-
 # Use all CPU cores
-
 pytest -n auto
 
 # Limit to 4 workers
-
 pytest -n 4
-```text
+```
 
 ### Specific Tests
 
 ```bash
 pytest tests/e2e/test_medallion_pipeline.py::TestFullMedallionPipeline::test_full_medallion_flow
-```text
+```
 
 ## Next Steps
 
@@ -388,7 +379,6 @@ pytest tests/e2e/test_medallion_pipeline.py::TestFullMedallionPipeline::test_ful
 All testing dependencies already added to `requirements.txt`:
 
 ```
-
 pytest 8.3.3
 pytest-cov 6.0.0
 pytest-mock 3.14.0
@@ -399,8 +389,7 @@ coverage[toml] 7.6.1
 faker 28.4.1
 freezegun 1.5.1
 responses 0.25.3
-
-```text
+```
 
 ## Architecture Coverage
 
@@ -443,7 +432,7 @@ Airflow DAG
 ├── test_dag_dependencies ✅
 ├── test_dag_configuration ✅
 └── test_dag_validation_rules ✅
-```text
+```
 
 ## Quality Metrics
 

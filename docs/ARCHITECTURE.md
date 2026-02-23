@@ -20,7 +20,7 @@ This platform implements a **medallion architecture** (Bronze → Silver → Gol
 │ Trino    │ Query analytics     │ SQL engine             │
 │ Superset │ Visualize           │ BI/Dashboards          │
 └─────────────────────────────────────────────────────────┘
-```text
+```
 
 ## Bronze Layer (Raw Data)
 
@@ -65,7 +65,7 @@ bronze:
     storage:
       format: parquet
       partition_by: [year, month]
-```text
+```
 
 ## Silver Layer (Cleaned Data)
 
@@ -94,7 +94,7 @@ Transform Bronze data into **typed, validated, deduplicated** tables ready for a
 Bronze Layer (Iceberg) → Spark Job → Silver Layer (Iceberg)
            ↓                 ↓              ↓
     Config YAML         Transform     Quality Checks
-```text
+```
 
 ### Configuration Example
 
@@ -128,7 +128,7 @@ quality_checks:
       column: passenger_count
       min: 1
       max: 10
-```text
+```
 
 ## Gold Layer (Analytics)
 
@@ -155,7 +155,7 @@ Create **business-focused aggregates** and **analytics-ready marts**.
 Silver Layer → dbt run → Gold Layer (Marts/Aggregates)
                 ↓
            SQL Models (version controlled)
-```text
+```
 
 ### Example Models
 
@@ -210,7 +210,7 @@ Schedule and coordinate pipeline execution. **Controls WHEN, not HOW**.
 
 ```python
 ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
-```text
+```
 
 ### Task Types
 
@@ -220,17 +220,16 @@ ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
 4. **PythonOperator**: Data quality checks
 
 ### Orchestration Configuration
-  dag:
-    schedule_interval: "0 2 * * *"  # Daily at 2 AM
 
-    retries: 2
-    retry_delay_minutes: 5
-```text
+```yaml
+dag:
+  schedule_interval: "0 2 * * *"  # Daily at 2 AM
+  retries: 2
+  retry_delay_minutes: 5
+```
 
 ## Storage Layer (Iceberg + MinIO)
-
 ### Why Apache Iceberg?
-
 - **ACID transactions**: Safe concurrent writes
 - **Time travel**: Query historical data
 - **Schema evolution**: Add/modify columns safely
@@ -238,7 +237,6 @@ ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
 - **Hidden partitioning**: Users don't need to know partitions
 
 ### Why MinIO?
-
 - **S3-compatible**: Drop-in replacement for AWS S3
 - **Self-hosted**: No cloud vendor lock-in
 - **High performance**: Optimized for large files
@@ -246,30 +244,22 @@ ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
 
 ### Bucket Structure
 
-```
-
+```text
 minio/
 ├── bronze/          # Raw data
-
 │   └── nyc-taxi/
 ├── silver/          # Cleaned data
-
 │   └── nyc-taxi/
 ├── gold/            # Analytics
-
 │   └── analytics/
 └── warehouse/       # Metadata
-
-```text
+```
 
 ## Query Layer (Trino)
-
 ### Purpose
-
 Unified SQL interface to query all layers (Bronze, Silver, Gold).
 
 ### Features
-
 - **Federated queries**: Join across catalogs
 - **MPP architecture**: Parallel query execution
 - **ANSI SQL**: Standard SQL syntax
@@ -295,24 +285,19 @@ SELECT
 FROM iceberg.bronze.nyc_taxi_raw b
 LEFT JOIN iceberg.silver.nyc_taxi_clean s ON b.id = s.id
 GROUP BY b.year;
-```text
+```
 
 ## Visualization Layer (Superset)
-
 ### Purpose
-
 Self-service analytics and dashboards.
 
 ### Integration
-
 - **Data source**: Trino (queries Iceberg)
 - **Semantic layer**: SQL Lab for ad-hoc queries
 - **Dashboards**: Pre-built visualizations
 
 ## Config-Driven Philosophy
-
 ### Why Config-Driven?
-
 1. **No code changes**: Engineers edit YAML only
 2. **Version controlled**: Config in Git
 3. **Testable**: Validate YAML schemas
@@ -320,7 +305,6 @@ Self-service analytics and dashboards.
 5. **Declarative**: Describe what, not how
 
 ### What Can Be Configured?
-
 ✅ Data sources (URL, database, API)  
 ✅ Ingestion parameters (chunk size, mode)  
 ✅ Transformations (filters, joins, aggregations)  
@@ -330,125 +314,97 @@ Self-service analytics and dashboards.
 ✅ Retry logic  
 
 ### Example Workflow
-
 **Without Config-Driven** (traditional):
+
 ```python
-
 # Engineer must edit Python code
-
 df = df.filter(df['trip_distance'] > 0)  # Hardcoded
-
 df = df.withColumn('duration', ...)      # Hardcoded
-
-```text
+```
 
 **With Config-Driven** (our approach):
+
 ```yaml
-
 # Engineer edits YAML
-
 transformations:
   filters:
     - "trip_distance > 0"  # Configurable
-
   derived_columns:
     - name: duration
       expression: "..."    # Configurable
-
 ```
-
 ## Data Quality Strategy
-
 ### Bronze Layer
-
 - **Schema validation**: Ensure expected columns exist
 - **Not null checks**: Key columns must have values
 - **Logging**: Record all ingestion attempts
 
 ### Silver Layer
-
 - **Range checks**: Values within expected bounds
 - **Referential integrity**: Foreign keys valid
 - **Deduplication**: No duplicate records
 - **Type validation**: Correct data types
 
 ### Gold Layer
-
 - **Aggregate validation**: Totals match sources
 - **Completeness**: All expected data present
 - **dbt tests**: Custom business logic tests
 
 ## Monitoring & Observability
-
 ### Airflow
-
 - **DAG runs**: Success/failure rates
 - **Task duration**: Identify slow tasks
 - **Retry patterns**: Common failure points
 
 ### Spark
-
 - **Job metrics**: Records processed, duration
 - **Resource usage**: CPU, memory, I/O
 - **Shuffle metrics**: Data movement
 
 ### Trino
-
 - **Query performance**: Execution time
 - **Data scanned**: Bytes read
 - **Cache hit rates**: Performance optimization
 
 ## Security Considerations
-
 ### Access Control
-
 - **MinIO**: Bucket policies, IAM
 - **Trino**: Role-based access control (RBAC)
 - **Airflow**: User authentication, RBAC
 
 ### Data Encryption
-
 - **At rest**: MinIO encryption
 - **In transit**: TLS/SSL for all connections
 
 ### Secrets Management
-
 - **Airflow**: Connections, Variables
 - **Kubernetes**: Secrets (production)
 - **Environment variables**: Docker Compose
 
 ## Scalability
-
 ### Horizontal Scaling
-
 - **Spark workers**: Add more workers for larger datasets
 - **Trino workers**: Distribute query load
 - **Airflow workers**: Parallel task execution
 
 ### Vertical Scaling
-
 - **Memory**: Increase for large Spark jobs
 - **CPU**: More cores for parallel processing
 - **Storage**: Expand MinIO capacity
 
 ## Disaster Recovery
-
 ### Backup Strategy
-
 - **Iceberg snapshots**: Point-in-time recovery
 - **Metastore backup**: Hive Metastore database
 - **Config backup**: Git repository
 
 ### Recovery Procedures
-
 1. Restore Metastore from backup
 2. Point Iceberg to previous snapshot
 3. Re-run failed pipelines from Airflow
 
 ## Future Enhancements
-
 ### Potential Additions
-
 - **Streaming**: Kafka/Redpanda for real-time data
 - **ML Integration**: MLflow for model tracking
 - **Data Catalog**: Amundsen or DataHub

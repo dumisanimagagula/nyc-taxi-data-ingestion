@@ -8,7 +8,7 @@ The `datasets.yaml` configuration file controls which datasets are ingested and 
 
 ```text
 config/datasets/datasets.yaml
-```text
+```
 
 ## Quick Start
 
@@ -18,16 +18,13 @@ config/datasets/datasets.yaml
 datasets:
   - name: fhv_taxi
     enabled: false  # Change to true to enable
-
-```text
+```
 
 ### Add a New Dataset
 
 ```yaml
 datasets:
   # ... existing datasets ...
-
-  
   - name: my_new_dataset
     enabled: true
     priority: 3
@@ -65,8 +62,7 @@ quality_checks:
     - "range_check"    # Validate value ranges
 
     - "schema_check"   # Verify schema matches expected
-
-```text
+```
 
 ---
 
@@ -170,7 +166,7 @@ quality_checks:
     enabled: true
     frequency: daily
     time: "02:00"
-```text
+```
 
 ### Example 2: Reference Data (CSV)
 
@@ -207,7 +203,7 @@ quality_checks:
     frequency: weekly  # Reference data changes infrequently
 
     time: "01:00"
-```text
+```
 
 ### Example 3: Optional Dataset (Disabled)
 
@@ -265,8 +261,7 @@ quality_checks:
       - yellow_taxi  # Must run after yellow_taxi
 
       - taxi_zones   # Must run after taxi_zones
-
-```text
+```
 
 ---
 
@@ -297,7 +292,7 @@ environment_overrides:
 
     enable_lineage: true
     enable_monitoring: true
-```text
+```
 
 **How it works**:
 1. DAG reads `AIRFLOW_ENV` variable
@@ -330,7 +325,7 @@ Given these priorities:
 
 - name: fhv_taxi
   priority: 3
-```text
+```
 
 **Execution order**:
 1. `taxi_zones` (priority 0) - reference data loaded first
@@ -383,7 +378,7 @@ quality_checks:
     min_row_count: 1000        # Lower threshold
 
   fail_on_warning: false
-```text
+```
 
 ### Template 3: Development Only
 
@@ -392,8 +387,7 @@ For development/testing:
 ```yaml
 quality_checks:
   enabled: false  # Skip checks entirely in dev
-
-```text
+```
 
 ---
 
@@ -413,7 +407,7 @@ target:
     - "day"
   sort_by:
     - "pickup_datetime"
-```text
+```
 
 **Benefits**:
 - Fast queries filtering by date
@@ -449,7 +443,7 @@ target:
   sort_by:
     - "pickup_datetime"
     - "dropoff_datetime"
-```text
+```
 
 ---
 
@@ -487,7 +481,7 @@ source:
         constraints:
           min: 0
           max: 10
-```text
+```
 
 ### Schema Evolution
 
@@ -502,16 +496,14 @@ source:
     version: "2024-01"
     
     # Allow new columns
-
     allow_new_columns: true
     
     # Require specific columns
-
     required_columns:
       - "trip_id"
       - "pickup_datetime"
       - "fare_amount"
-```text
+```
 
 ---
 
@@ -530,16 +522,14 @@ source:
 ```yaml
 - name: dataset1
   description: "Data"
-```text
+```
 
 ### 2. Set Appropriate Priorities
 
 Reference data first, then fact tables:
 
 ```yaml
-
 # Reference data - Priority 0
-
 - name: taxi_zones
   priority: 0
 
@@ -547,13 +537,12 @@ Reference data first, then fact tables:
   priority: 0
 
 # Fact tables - Priority 1+
-
 - name: yellow_taxi
   priority: 1
   
 - name: green_taxi
   priority: 2
-```text
+```
 
 ### 3. Enable Quality Checks in Production
 
@@ -561,22 +550,18 @@ Reference data first, then fact tables:
 quality_checks:
   enabled: true
   critical: true  # Fail fast in production
-
-```text
+```
 
 ### 4. Use Environment Overrides
 
 Don't duplicate configurations:
 
 ```yaml
-
 # Base config applies everywhere
-
 quality_checks:
   enabled: true
 
 # Override per environment
-
 environment_overrides:
   dev:
     quality_checks_required: false
@@ -597,7 +582,7 @@ environment_overrides:
 
     pii: false
     classification: "public"
-```text
+```
 
 ---
 
@@ -615,19 +600,15 @@ environment_overrides:
 
 **Solution**:
 ```bash
-
 # Validate YAML
-
 python -c "import yaml; yaml.safe_load(open('config/datasets/datasets.yaml'))"
 
 # Check Airflow can read file
-
 docker exec lakehouse-airflow cat /app/config/datasets/datasets.yaml
 
 # Refresh DAG
-
 docker exec lakehouse-airflow airflow dags reserialize
-```text
+```
 
 ### Issue: Wrong Datasets in Environment
 
@@ -643,8 +624,7 @@ environment_overrides:
 datasets:
   - name: test_dataset
     enabled: true  # Only in dev/staging, overridden in prod
-
-```text
+```
 
 ### Issue: Quality Checks Always Failing
 
@@ -658,7 +638,6 @@ quality_checks:
     max_null_percentage: 5.0  # Too strict? Increase to 10.0
 
     min_row_count: 1000000     # Too high? Decrease
-
 ```
 
 ### Issue: Schema Validation Errors
@@ -673,7 +652,7 @@ source:
     evolution_mode: "append"  # Allow new columns
 
     allow_new_columns: true
-```text
+```
 
 ---
 
@@ -687,20 +666,18 @@ datasets = ["yellow_taxi", "green_taxi"]
 
 for dataset in datasets:
     create_task(dataset)
-```text
+```
 
 **After** (config-driven):
 ```yaml
-
 # config/datasets/datasets.yaml
-
 datasets:
   - name: yellow_taxi
     enabled: true
     
   - name: green_taxi
     enabled: true
-```text
+```
 
 **Benefits**:
 - ✅ Add datasets without code changes

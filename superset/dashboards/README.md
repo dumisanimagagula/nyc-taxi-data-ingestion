@@ -134,15 +134,13 @@ Track data transformations and dependencies across layers with 10 charts:
 ### Import Method 2: Superset CLI
 
 ```bash
-
 # From superset container
-
 docker exec -it superset superset import-dashboards \
   -p /app/superset/dashboards/data_quality_monitoring.json
 
 docker exec -it superset superset import-dashboards \
   -p /app/superset/dashboards/data_lineage_flow.json
-```text
+```
 
 ### Import Method 3: API (Automated)
 
@@ -155,7 +153,6 @@ USERNAME = "admin"
 PASSWORD = "admin"
 
 # Login
-
 login_response = requests.post(
     f"{SUPERSET_URL}/api/v1/security/login",
     json={"username": USERNAME, "password": PASSWORD}
@@ -168,7 +165,6 @@ headers = {
 }
 
 # Import dashboard
-
 with open("data_quality_monitoring.json") as f:
     dashboard_config = json.load(f)
 
@@ -179,7 +175,7 @@ response = requests.post(
 )
 
 print(f"Import status: {response.status_code}")
-```text
+```
 
 ---
 
@@ -249,7 +245,7 @@ WITH (
     format = 'PARQUET',
     partitioning = ARRAY['partition_day', 'layer']
 );
-```text
+```
 
 ### Add Trino Connection in Superset
 
@@ -312,7 +308,7 @@ Update `json_metadata`:
     "gold": "#2ca02c"
   }
 }
-```text
+```
 
 ---
 
@@ -387,12 +383,10 @@ Update `json_metadata`:
 Export regularly:
 
 ```bash
-
 # Export dashboard
-
 docker exec -it superset superset export-dashboards \
   -f /app/backups/dashboards_$(date +%Y%m%d).json
-```text
+```
 
 ---
 

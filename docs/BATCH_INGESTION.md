@@ -19,7 +19,7 @@ data_source:
   month: 1
   base_url: "https://..."
   taxi_type: yellow
-```text
+```
 
 Run one month at a time.
 
@@ -37,7 +37,7 @@ data_sources:
     month: 2
   - year: 2021
     month: 3
-```text
+```
 
 Run multiple months in one command.
 
@@ -59,7 +59,7 @@ database:
 ingestion:
   chunk_size: 250000
   if_exists: "replace"
-```text
+```
 
 ### Batch: Q1 2021
 
@@ -83,7 +83,6 @@ database:
 ingestion:
   chunk_size: 250000
   if_exists: "append"  # Important: append, not replace!
-
 ```
 
 ### Batch: Full Year
@@ -101,7 +100,6 @@ data_sources:
   - year: 2021
     month: 3
   # ... all 12 months
-
   - year: 2021
     month: 12
 
@@ -112,7 +110,7 @@ database:
 ingestion:
   chunk_size: 250000
   if_exists: "append"
-```text
+```
 
 ### Batch: Multiple Years
 
@@ -123,22 +121,17 @@ data_source:
 
 data_sources:
   # 2020
-
   - year: 2020
     month: 1
   - year: 2020
     month: 2
   # ... more 2020 months ...
-
-  
   # 2021
-
   - year: 2021
     month: 1
   - year: 2021
     month: 2
   # ... more 2021 months ...
-
 database:
   connection_string: "postgresql://root:root@localhost:5432/ny_taxi"
   table_name: "yellow_tripdata"
@@ -146,18 +139,16 @@ database:
 ingestion:
   chunk_size: 250000
   if_exists: "append"
-```text
+```
 
 ## Usage
 
 ### Run Single Month (Default)
 
 ```bash
-
 # Uses config.yaml (single month)
-
 python ingest_nyc_taxi_data.py
-```text
+```
 
 ### Run Batch Q1 2021
 
@@ -169,13 +160,13 @@ python ingest_nyc_taxi_data.py --config config.examples/batch_2021_q1.yaml
 
 ```bash
 python ingest_nyc_taxi_data.py --config config.examples/batch_2021_full_year.yaml
-```text
+```
 
 ### Run Multiple Years
 
 ```bash
 python ingest_nyc_taxi_data.py --config config.examples/batch_multi_year.yaml
-```text
+```
 
 ## Important: Single vs Batch Mode
 
@@ -198,9 +189,7 @@ python ingest_nyc_taxi_data.py --config config.examples/batch_multi_year.yaml
 
 **Step 1: Start fresh with one month**
 ```yaml
-
 # config.yaml
-
 data_source:
   year: 2021
   month: 1
@@ -209,7 +198,7 @@ data_source:
 
 ingestion:
   if_exists: "replace"
-```text
+```
 ```bash
 python ingest_nyc_taxi_data.py
 ```
@@ -217,9 +206,7 @@ python ingest_nyc_taxi_data.py
 ### Step 2: Add more months (batch mode)
 
 ```yaml
-
 # config.yaml or config_batch.yaml
-
 data_source:
   base_url: "https://..."
   taxi_type: yellow
@@ -234,10 +221,10 @@ data_sources:
 
 ingestion:
   if_exists: "append"
-```text
+```
 ```bash
 python ingest_nyc_taxi_data.py --config config_batch.yaml
-```text
+```
 
 ## Performance Tips
 
@@ -272,42 +259,30 @@ Use them as templates for your own batches.
 ### Pattern 1: Monthly Append
 
 ```bash
-
 # Each month, just add to config:
-
 # data_sources:
-
 #   - year: 2021, month: 1
-
 #   - year: 2021, month: 2
-
 #   - year: 2021, month: 3   ← New
-
 python ingest_nyc_taxi_data.py --config config_batch.yaml
-```text
+```
 
 ### Pattern 2: Quarterly Load
 
 ```bash
-
 # Load 3 months at a time
-
 python ingest_nyc_taxi_data.py --config config_examples/batch_2021_q1.yaml
 
 # ... wait for completion ...
-
 # Edit config to Q2 and repeat
-
 ```
 
 ### Pattern 3: Annual Bulk Load
 
 ```bash
-
 # Load entire year in one run
-
 python ingest_nyc_taxi_data.py --config config_examples/batch_2021_full_year.yaml
-```text
+```
 
 ## Backward Compatibility
 
@@ -331,19 +306,15 @@ A: Increase `chunk_size` to 500k or 1M for better performance. Ingestion uses Po
 ## Run with Docker
 
 ```bash
-
 # Build ingestor once
-
 docker compose build ingestor
 
 # Start database + pgAdmin
-
 docker compose up -d pgdatabase pgadmin
 
 # Run batch config
-
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2021_q1.yaml ingestor
-```text
+```
 
 Note:
 - Inside Docker, set `database.connection_string` host to `pgdatabase`.
@@ -351,4 +322,4 @@ Note:
 Ready to ingest multiple months? Try:
 ```bash
 python ingest_nyc_taxi_data.py --config config.examples/batch_2021_q1.yaml
-```text
+```

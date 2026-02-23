@@ -9,9 +9,7 @@ Both trip ingestion and zones ingestion are fully config-driven using YAML files
 ### Complete Configuration Template
 
 ```yaml
-
 # Data source - for trip data (optional if only ingesting zones)
-
 data_source:
   year: 2021
   month: 1
@@ -19,7 +17,6 @@ data_source:
   taxi_type: yellow
 
 # Batch mode - for multiple months (optional)
-
 data_sources:
   - year: 2021
     month: 1
@@ -27,13 +24,11 @@ data_sources:
     month: 2
 
 # Database connection (required)
-
 database:
   connection_string: "postgresql://root:root@pgdatabase:5432/ny_taxi"
   table_name: "yellow_tripdata"
 
 # Ingestion settings (optional, has defaults)
-
 ingestion:
   chunk_size: 250000
   n_jobs: 1
@@ -41,7 +36,6 @@ ingestion:
   if_exists: "replace"
 
 # Zones reference data (optional)
-
 zones:
   enabled: false  # Set to true to enable zones ingestion
 
@@ -51,11 +45,10 @@ zones:
   drop_existing: true
 
 # Logging (optional, has defaults)
-
 logging:
   level: "INFO"
   file: ""
-```text
+```
 
 ## Usage Examples
 
@@ -77,12 +70,12 @@ zones:
 
 logging:
   level: "INFO"
-```text
+```
 
 **Usage**:
 ```bash
 docker compose run --rm -e CONFIG_PATH=config.examples/zones_only.yaml ingestor python ingest_zones.py
-```text
+```
 
 ### 2. Trip Data with Zones
 
@@ -111,11 +104,9 @@ zones:
 **Usage**:
 
 ```bash
-
 # Zones are ingested automatically first when zones.enabled=true
-
 docker compose run --rm -e CONFIG_PATH=config.examples/with_zones.yaml ingestor
-```text
+```
 
 ### 3. Batch Trip Data with Zones
 
@@ -145,12 +136,12 @@ zones:
   enabled: true  # Zones ingested once before all trip data
 
   table_name: "zones"
-```text
+```
 
 **Usage**:
 ```bash
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2021_q1_with_zones.yaml ingestor
-```text
+```
 
 ## Configuration Defaults
 
@@ -173,33 +164,28 @@ url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
 table_name: "zones"
 create_index: True
 drop_existing: True
-```text
+```
 
 ### Logging Defaults
 
 ```python
 level: "INFO"
 file: ""  # Console only
-
-```text
+```
 
 ## Environment Variables
 
 Override config path using environment variable:
 ```bash
-
 # Default: config.yaml
-
 docker compose run --rm ingestor
 
 # Custom config file
-
 docker compose run --rm -e CONFIG_PATH=config.examples/custom.yaml ingestor
 
 # Custom config for zones script
-
 docker compose run --rm -e CONFIG_PATH=config.examples/zones_only.yaml ingestor python ingest_zones.py
-```text
+```
 
 ## Configuration Validation
 
@@ -212,33 +198,25 @@ The config loader validates:
 ## Quick Reference Commands
 
 ```bash
-
 # Ingest zones only
-
 docker compose run --rm -e CONFIG_PATH=config.examples/zones_only.yaml ingestor python ingest_zones.py
 
 # Ingest single month
-
 docker compose run --rm ingestor
 
 # Ingest single month with zones
-
 docker compose run --rm -e CONFIG_PATH=config.examples/with_zones.yaml ingestor
 
 # Ingest Q1 2021
-
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2021_q1.yaml ingestor
 
 # Ingest full year 2021
-
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2021_full_year.yaml ingestor
 
 # Verify zones data
-
 docker compose run --rm ingestor python verify_zones.py
 
 # Example zone joins
-
 docker compose run --rm ingestor python example_zones_join.py
 ```
 

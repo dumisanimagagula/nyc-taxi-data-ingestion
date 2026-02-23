@@ -13,30 +13,25 @@ Both trip data and zones reference data ingestion are fully config-driven.
 ### Ingest Trip Data Only
 
 ```bash
-
 # Uses config.yaml (default)
-
 docker compose run --rm ingestor
 
 # With custom config
-
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2021_q1.yaml ingestor
-```text
+```
 
 ### Ingest Zones Only
 
 ```bash
 docker compose run --rm -e CONFIG_PATH=config.examples/zones_only.yaml ingestor python ingest_zones.py
-```text
+```
 
 ### Ingest Zones + Trips (Automatic)
 
 ```bash
-
 # Zones are automatically ingested first when zones.enabled=true
-
 docker compose run --rm -e CONFIG_PATH=config.examples/with_zones.yaml ingestor
-```text
+```
 
 ---
 
@@ -62,7 +57,7 @@ data_source:
   month: 1
   base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
   taxi_type: yellow
-```text
+```
 
 ### Batch Multiple Months
 
@@ -76,7 +71,7 @@ data_sources:
     month: 1
   - year: 2021
     month: 2
-```text
+```
 
 ---
 
@@ -96,19 +91,15 @@ data_sources:
 ## 🔍 Verification Commands
 
 ```bash
-
 # Verify zones data
-
 docker compose run --rm ingestor python verify_zones.py
 
 # Test zones + trips integration
-
 docker compose run --rm ingestor python test_config_driven.py
 
 # Example zone join queries
-
 docker compose run --rm ingestor python example_zones_join.py
-```text
+```
 
 ---
 
@@ -163,37 +154,29 @@ docker compose run --rm ingestor python example_zones_join.py
 ### Initial Setup
 
 ```bash
-
 # 1. Clean database
-
 docker compose down -v
 
 # 2. Ingest zones + Q1 2021
-
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2021_q1_with_zones.yaml ingestor
 
 # 3. Verify
-
 docker compose run --rm ingestor python test_config_driven.py
 ```
 
 ### Add More Months
 
 ```bash
-
 # Zones already exist, just add more trip data
-
 docker compose run --rm -e CONFIG_PATH=config.examples/batch_2021_q2.yaml ingestor
-```text
+```
 
 ### Re-ingest Zones
 
 ```bash
-
 # Zones will be dropped and recreated
-
 docker compose run --rm -e CONFIG_PATH=config.examples/zones_only.yaml ingestor python ingest_zones.py
-```text
+```
 
 ---
 

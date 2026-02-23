@@ -59,7 +59,7 @@ data_quality:
   enable_anomaly_detection: true
   enable_expectations: true
   enable_reconciliation: true
-```text
+```
 
 See [Configuration Reference](#configuration-reference) for full options.
 
@@ -152,7 +152,7 @@ RowError(
     row_data={"trip_id": 123, ...},
     timestamp="2024-01-15T10:30:00"
 )
-```text
+```
 
 **Error Types**:
 - NULL_VALUE
@@ -178,8 +178,7 @@ Flags values beyond N standard deviations from mean:
 anomaly_detection:
   numeric_method: "zscore"
   zscore_threshold: 3.0  # 3 std devs
-
-```text
+```
 
 #### IQR (Interquartile Range) - Recommended
 
@@ -189,7 +188,6 @@ More robust to outliers:
 anomaly_detection:
   numeric_method: "iqr"
   iqr_multiplier: 1.5  # 1.5 = standard, 3.0 = extreme
-
 ```
 
 #### Categorical (Rare Values)
@@ -200,8 +198,7 @@ Flags infrequent categories:
 anomaly_detection:
   categorical_columns: ["payment_type"]
   min_frequency: 0.001  # < 0.1% of records
-
-```text
+```
 
 #### Null Spike Detection
 
@@ -210,8 +207,7 @@ Alerts on sudden null rate increases:
 ```yaml
 anomaly_detection:
   null_spike_threshold: 2.0  # > 2x historical rate
-
-```text
+```
 
 #### Time Series (Moving Average)
 
@@ -223,8 +219,7 @@ anomaly_detection:
   time_series_window: 7  # days
 
   time_series_threshold: 2.0  # std devs
-
-```text
+```
 
 ### 4. Great Expectations
 
@@ -234,11 +229,9 @@ Integrates with Great Expectations (optional):
 from src.data_quality import create_standard_expectations
 
 # Pre-built suite for taxi data
-
 suite = create_standard_expectations()
 
 # Add custom expectations
-
 suite.expect_column_values_to_be_between(
     column="trip_duration_minutes",
     min_value=0.5,
@@ -246,7 +239,6 @@ suite.expect_column_values_to_be_between(
 )
 
 # Validate
-
 results = suite.validate_suite(df)
 ```
 
@@ -265,11 +257,10 @@ results = reconcile_bronze_to_silver(
 )
 
 # Check results
-
 for result in results:
     if not result.passed:
         logger.error(f"{result.check_name} failed: {result.message}")
-```text
+```
 
 **Check Types**:
 1. **Row Count**: Ensures target has expected rows (with tolerance)
@@ -284,11 +275,8 @@ Complete `data_quality` section:
 ```yaml
 data_quality:
   # ============================================================================
-
   # Global Settings
-
   # ============================================================================
-
   enabled: true                    # Master toggle
 
   fail_on_error: false             # Stop pipeline on quality failures
@@ -299,11 +287,8 @@ data_quality:
 
   
   # ============================================================================
-
   # Component Toggles
-
   # ============================================================================
-
   enable_metrics: true             # Collect quality metrics
 
   enable_error_tracking: true      # Track row-level errors
@@ -316,11 +301,8 @@ data_quality:
 
   
   # ============================================================================
-
   # Column-Level Checks
-
   # ============================================================================
-
   checks:
     columns:
       pickup_datetime:
@@ -343,11 +325,8 @@ data_quality:
         description: "Payment method code"
   
   # ============================================================================
-
   # Anomaly Detection
-
   # ============================================================================
-
   anomaly_detection:
     numeric_columns:
       - "trip_distance"
@@ -371,11 +350,8 @@ data_quality:
     time_series_threshold: 2.0
   
   # ============================================================================
-
   # Great Expectations
-
   # ============================================================================
-
   expectations:
     enabled: true
     use_standard_expectations: true
@@ -393,11 +369,8 @@ data_quality:
           max_value: 720
   
   # ============================================================================
-
   # Reconciliation
-
   # ============================================================================
-
   reconciliation:
     enabled: true
     
@@ -427,11 +400,8 @@ data_quality:
           tolerance_pct: 0.01
   
   # ============================================================================
-
   # Reporting
-
   # ============================================================================
-
   metrics:
     save_to_disk: true
     output_directory: "logs/data_quality"
@@ -451,7 +421,7 @@ data_quality:
       - "WARNING"
       - "ERROR"
       - "CRITICAL"
-```text
+```
 
 ## Integration Examples
 
@@ -462,10 +432,7 @@ from src.data_quality import DataQualityOrchestrator
 
 def ingest_with_quality_checks(config):
     # ... existing ingestion code ...
-
-    
     # Validate ingested data
-
     if config.get("data_quality", {}).get("enabled", False):
         orchestrator = DataQualityOrchestrator(
             spark=spark,
@@ -484,7 +451,7 @@ def ingest_with_quality_checks(config):
                 f"Bronze quality check failed: {result['quality_level']} "
                 f"(score: {result['overall_score']:.2f})"
             )
-```text
+```
 
 ### Silver Layer (bronze_to_silver.py)
 
@@ -493,10 +460,7 @@ from src.data_quality import DataQualityOrchestrator, reconcile_bronze_to_silver
 
 def transform_with_quality_checks(config):
     # ... existing transformation code ...
-
-    
     # Validate silver data
-
     orchestrator = DataQualityOrchestrator(
         spark=spark,
         config=config["data_quality"],
@@ -510,14 +474,12 @@ def transform_with_quality_checks(config):
     )
     
     # Reconcile with bronze
-
     recon_results = reconcile_bronze_to_silver(
         spark=spark,
         config=config["data_quality"]["reconciliation"]["bronze_to_silver"]
     )
     
     # Log results
-
     for recon_result in recon_results:
         if not recon_result.passed:
             logger.warning(f"Reconciliation failed: {recon_result.message}")
@@ -534,7 +496,6 @@ models:
     description: "Daily aggregated trip statistics"
     
     # dbt tests (basic quality checks)
-
     columns:
       - name: total_trips
         tests:
@@ -550,10 +511,9 @@ models:
               max_value: 10000
     
     # Custom post-hook for our DQ framework
-
     post-hook:
       - "{{ log('Running quality checks on ' ~ this, info=True) }}"
-```text
+```
 
 Or create a dedicated dbt test:
 
@@ -575,7 +535,7 @@ WHERE
     row_count = 0  -- No rows
     OR null_count > 0  -- Nulls in critical column
     OR avg_fare_amount < 0  -- Invalid averages
-```text
+```
 
 ## Monitoring & Alerting
 
@@ -619,27 +579,23 @@ WHERE
     severity IN ('HIGH', 'CRITICAL')
     AND timestamp >= CURRENT_DATE - INTERVAL '7' DAY
 ORDER BY timestamp DESC
-```text
+```
 
 ### Airflow Alerts
 
 ```python
-
 # airflow/dags/nyc_taxi_medallion_dag.py
-
 from airflow.operators.email import EmailOperator
 
 def check_quality_and_alert(**context):
     """Check quality metrics and send alerts if needed"""
     
     # Read latest metrics
-
     metrics_file = max(glob.glob("logs/data_quality/metrics_*.json"))
     with open(metrics_file) as f:
         metrics = json.load(f)
     
     # Alert on low scores
-
     if metrics['overall_score'] < 70:
         send_alert_email(
             to=["data-engineering@company.com"],
@@ -658,7 +614,6 @@ def check_quality_and_alert(**context):
         )
 
 # Add to DAG
-
 quality_check_task = PythonOperator(
     task_id='check_quality_and_alert',
     python_callable=check_quality_and_alert,
@@ -676,13 +631,13 @@ transform_to_silver >> quality_check_task
 
 ```text
 WARNING: great_expectations not installed, using fallback implementation
-```text
+```
 
 **Solution**: Install GE or use fallback (already works):
 
 ```bash
 pip install great_expectations==0.18.20
-```text
+```
 
 #### 2. Quality Score Always 0
 
@@ -703,14 +658,14 @@ data_quality:
 
 ```text
 WARNING: Max errors (1000) reached, additional errors not tracked
-```text
+```
 
 **Solution**: Increase limit or fix data issues:
 
 ```yaml
 data_quality:
   max_errors_to_track: 5000
-```text
+```
 
 #### 4. Reconciliation Fails
 
@@ -722,7 +677,6 @@ data_quality:
 reconciliation:
   bronze_to_silver:
     row_count_tolerance_pct: 5.0  # Allow 5% difference
-
 ```
 
 ### Debugging
@@ -732,20 +686,17 @@ Enable debug logging:
 ```python
 import logging
 logging.getLogger('src.data_quality').setLevel(logging.DEBUG)
-```text
+```
 
 Check error files:
 
 ```bash
-
 # Latest errors
-
 cat logs/data_quality/errors/errors_*.csv | tail -n 20
 
 # Error summary
-
 cut -d',' -f3,4 logs/data_quality/errors/errors_*.csv | sort | uniq -c
-```text
+```
 
 Query Iceberg error table:
 
@@ -758,7 +709,7 @@ FROM data_quality.row_errors
 WHERE partition_day = CURRENT_DATE
 GROUP BY error_type, severity
 ORDER BY error_count DESC
-```text
+```
 
 ## Best Practices
 

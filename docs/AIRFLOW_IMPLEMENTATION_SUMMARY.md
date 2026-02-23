@@ -206,7 +206,7 @@ Issues:
 ❌ Hardcoded configurations
 ❌ Fixed datasets
 ❌ Single environment
-```text
+```
 
 ### After (Production Version)
 
@@ -341,19 +341,15 @@ Benefits:
 ### Running Tests
 
 ```bash
-
 # Run all Airflow tests
-
 pytest tests/airflow/test_dag_Production Version_validation.py -v
 
 # Run specific test class
-
 pytest tests/airflow/test_dag_Production Version_validation.py::TestHealthChecks -v
 
 # Run with coverage
-
 pytest tests/airflow/ --cov=airflow/dags --cov-report=html
-```text
+```
 
 ---
 
@@ -362,49 +358,39 @@ pytest tests/airflow/ --cov=airflow/dags --cov-report=html
 ### 1. Import Configuration (30 seconds)
 
 ```bash
-
 # Import Airflow variables
-
 docker exec lakehouse-airflow \
   airflow variables import /app/config/airflow/variables_dev.json
 
 # Configure Spark connection
-
 docker exec lakehouse-airflow \
   airflow connections add spark_default \
   --conn-type spark \
   --conn-host spark-master \
   --conn-port 7077
-```text
+```
 
 ### 2. Verify Setup (10 seconds)
 
 ```bash
-
 # List variables
-
 docker exec lakehouse-airflow airflow variables list
 
 # List connections
-
 docker exec lakehouse-airflow airflow connections list
 
 # List DAGs
-
 docker exec lakehouse-airflow airflow dags list | grep nyc_taxi
-```text
+```
 
 ### 3. Test DAG (2 minutes)
 
 ```bash
-
 # Test DAG structure
-
 docker exec lakehouse-airflow \
   airflow dags test nyc_taxi_medallion_pipeline 2024-01-01
 
 # Test health check
-
 docker exec lakehouse-airflow \
   airflow tasks test nyc_taxi_medallion_pipeline \
   preflight_checks.check_spark_master 2024-01-01
@@ -413,17 +399,14 @@ docker exec lakehouse-airflow \
 ### 4. Deploy (10 seconds)
 
 ```bash
-
 # Unpause DAG
-
 docker exec lakehouse-airflow \
   airflow dags unpause nyc_taxi_medallion_pipeline
 
 # Trigger run
-
 docker exec lakehouse-airflow \
   airflow dags trigger nyc_taxi_medallion_pipeline
-```text
+```
 
 **Total time**: ~3 minutes from configuration to running pipeline!
 

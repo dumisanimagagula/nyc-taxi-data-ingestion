@@ -47,18 +47,14 @@ docker compose run --rm -e CONFIG_PATH=config.examples/zones_only.yaml ingestor 
 #### Option 2: Using default config (zones must be enabled)
 
 ```bash
-
 # First, enable zones in config.yaml by setting zones.enabled=true
-
 docker compose run --rm ingestor python ingest_zones.py
 ```
 
 #### Option 3: Ingest zones along with trip data
 
 ```bash
-
 # Use a config with zones.enabled=true
-
 docker compose run --rm -e CONFIG_PATH=config.examples/with_zones.yaml ingestor
 ```
 

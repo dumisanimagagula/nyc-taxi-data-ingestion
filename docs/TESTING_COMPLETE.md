@@ -32,8 +32,7 @@ faker 28.4.1              # Realistic test data generation
 freezegun 1.5.1           # Time mocking for datetime tests
 
 responses 0.25.3          # HTTP request mocking
-
-```text
+```
 
 ### 🧪 Test Modules (70 Tests Total)
 
@@ -84,7 +83,7 @@ tests/integration/test_data_quality_integration.py
 │   └── Environment merging
 └── Lineage (1 test)
     └── End-to-end lineage tracking
-```text
+```
 
 #### End-to-End Tests: 6 Tests
 
@@ -130,7 +129,7 @@ tests/airflow/test_dag_validation.py
 └── Quality (2 tests)
     ├── Docstring
     └── DateTime imports
-```text
+```
 
 ### 📊 Test Fixtures (13 Total)
 
@@ -141,8 +140,7 @@ spark_session: SparkSession          # Expensive to create, reused
 faker_instance: Faker                # Test data generator
 
 test_data_dir: Path                  # Auto-cleanup temp dir
-
-```text
+```
 
 **Function-Scoped** (fresh per test - isolation):
 ```python
@@ -163,7 +161,6 @@ temp_logs_dir: Path                  # Log artifacts
 reset_environment: fixture           # Env var isolation (auto-use)
 
 mock_pipeline_run_id: str            # Example: test_run_20240115_143022
-
 ```
 
 ### 📚 Documentation
@@ -215,8 +212,7 @@ mock_pipeline_run_id: str            # Example: test_run_20240115_143022
 @pytest.mark.requires_s3      # Requires S3/MinIO
 
 @pytest.mark.requires_metastore # Requires Hive Metastore
-
-```text
+```
 
 ## Key Features
 
@@ -257,23 +253,18 @@ mock_pipeline_run_id: str            # Example: test_run_20240115_143022
 ### Quick Start
 
 ```bash
-
 # All tests (full suite)
-
 pytest
 
 # Fast tests only (unit + airflow)
-
 pytest -m unit -m airflow
 
 # Fast with parallel execution
-
 pytest -m unit -n auto
 
 # Full with coverage report
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
-```text
+```
 
 ### By Category
 
@@ -285,8 +276,7 @@ pytest -m integration       # ~5 seconds
 pytest -m e2e              # ~20 seconds
 
 pytest -m airflow          # ~1 second
-
-```text
+```
 
 ## Architecture Coverage
 
@@ -344,13 +334,10 @@ pytest -m airflow          # ~1 second
 ### Immediate (5 minutes)
 
 ```bash
-
 # Run the test suite
-
 pytest
 
 # View coverage
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
 open htmlcov/index.html
 ```

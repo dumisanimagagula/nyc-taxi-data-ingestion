@@ -43,16 +43,13 @@ This document summarizes the code quality improvements implemented based on the 
 **Code Change**:
 
 ```python
-
 # Before
-
 df['_ingestion_timestamp'] = datetime.utcnow()
 
 # After
-
 from datetime import datetime, timezone
 df['_ingestion_timestamp'] = datetime.now(timezone.utc)
-```text
+```
 
 **Impact**: 
 - ✅ Future-proof code (utcnow deprecated in Python 3.12+)
@@ -77,7 +74,7 @@ class LakehouseException(Exception)
     ├── DataQualityError
     ├── TransformationError
     └── IngestionError
-```text
+```
 
 **Files Created**:
 - `src/exceptions.py`: Complete exception hierarchy
@@ -137,16 +134,13 @@ class LakehouseException(Exception)
 
 **Refactoring**:
 ```python
-
 # Before: Single complex method with nested loops
-
 # After: Multiple focused methods
-
 - _run_quality_checks(): Main orchestrator
 - _execute_single_quality_check(): Single check execution
 - _check_not_null(): Null value checking
 - _check_positive_values(): Positive value checking
-```text
+```
 
 **Impact**:
 - ✅ Reduced complexity from 20 to <10 per function
@@ -161,9 +155,7 @@ class LakehouseException(Exception)
 
 **New Module Structure**:
 ```python
-
 # silver/jobs/quality_checks.py
-
 - check_null_values(): Null checking logic
 - check_range_values(): Range checking logic
 - execute_quality_check(): Single check executor
@@ -172,15 +164,12 @@ class LakehouseException(Exception)
 **Refactored Main Method**:
 
 ```python
-
 # Before: 40+ lines with nested conditionals
-
 # After: Simple loop using helper module
-
 for check in checks:
     failures = execute_quality_check(df, check)
     all_failures.extend(failures)
-```text
+```
 
 **Files Created**:
 - `silver/jobs/quality_checks.py`: Quality check helper functions
@@ -202,18 +191,15 @@ for check in checks:
 
 **Code Change**:
 ```python
-
 # Before
-
 from pyspark.sql.types import *
 
 # After
-
 from pyspark.sql.types import (
     TimestampType, IntegerType, LongType, DoubleType,
     FloatType, StringType, BooleanType, DecimalType
 )
-```text
+```
 
 **Impact**:
 - ✅ Clearer code dependencies
@@ -229,18 +215,13 @@ from pyspark.sql.types import (
 
 **Code Changes**:
 ```python
-
 # Before
-
 except Exception as e:
     # e not used
-
 # After
-
 except Exception:
     # No unused variable
-
-```text
+```
 
 **Impact**:
 - ✅ Cleaner code
@@ -254,13 +235,10 @@ except Exception:
 
 **Code Changes**:
 ```python
-
 # Before
-
 logger.info(f"✓ Database verified via SQL")
 
 # After
-
 logger.info("✓ Database verified via SQL")
 ```
 
@@ -294,24 +272,18 @@ logger.info("✓ Database verified via SQL")
 ### Unit Tests to Add
 
 ```python
-
 # tests/test_exceptions.py
-
 def test_custom_exceptions():
     with pytest.raises(DataSourceError):
         raise DataSourceError("Test")
 
 # tests/test_bronze_helpers.py
-
 def test_convert_arrow_to_iceberg_type():
     # Test type conversions
-
 # tests/test_quality_checks.py
-
 def test_check_null_values():
     # Test null checking logic
-
-```text
+```
 
 ### Integration Tests
 
@@ -402,51 +374,37 @@ Before deploying to production, ensure:
 ### For Development
 
 ```bash
-
 # 1. Pull latest code
-
 git pull
 
 # 2. Review .env.example
-
 cat .env.example
 
 # 3. Copy to .env (already exists with defaults)
-
 # No action needed - .env was created with safe defaults
-
 # 4. Rebuild containers
-
 docker compose down
 docker compose up -d --build
 
 # 5. Verify services
-
 docker compose ps
-```text
+```
 
 ### For Production
 
 ```bash
-
 # 1. Create .env from .env.example
-
 cp .env.example .env
 
 # 2. Generate strong credentials
-
 # Update all passwords in .env
-
 # 3. Generate Fernet key
-
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 
 # Add to .env as AIRFLOW_FERNET_KEY
-
 # 4. Deploy with updated configuration
-
 docker compose up -d --build
-```text
+```
 
 ---
 

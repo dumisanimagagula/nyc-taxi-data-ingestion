@@ -108,7 +108,7 @@ Features:
   - Fast health checks (15s)
   - Minimal logging (5MB)
   - Monitoring disabled
-```text
+```
 
 #### `.env.staging` (125 lines)
 
@@ -136,7 +136,7 @@ Features:
   - Monitoring enabled
   - HTTPS enforced
   - Alerting configured
-```text
+```
 
 ### Docker Compose Override Files (3)
 
@@ -162,7 +162,7 @@ Features:
   - Reduced logging verbosity
   - Backup volume mounts
   - Staging-specific env vars
-```text
+```
 
 #### `docker-compose.override.prod.yaml`
 
@@ -190,7 +190,7 @@ Content:
   - Networking details
   - Security guidelines
   - Troubleshooting guide
-```text
+```
 
 #### `docs/DEPLOYMENT.md` (600+ lines)
 
@@ -225,7 +225,7 @@ Features:
 Usage:
   .\scripts\deploy.ps1 -Environment dev
   .\scripts\deploy.ps1 -Environment prod -SkipBackup
-```text
+```
 
 #### `scripts/teardown.ps1` (200+ lines)
 
@@ -258,7 +258,7 @@ Usage:
   .\scripts\healthcheck.ps1
   .\scripts\healthcheck.ps1 -Watch
   .\scripts\healthcheck.ps1 -Detailed
-```text
+```
 
 ### Modified Files (1)
 
@@ -336,7 +336,7 @@ Changes:
 6. Application Layer
    ├── Ingestor (→ minio + hive-metastore)
    └── dbt (→ trino)
-```text
+```
 
 ## Environment Comparison
 
@@ -399,105 +399,79 @@ Changes:
 ### Development Deployment
 
 ```powershell
-
 # Quick start
-
 .\scripts\deploy.ps1 -Environment dev
 
 # Or manually
-
 Copy-Item .env.dev .env
 docker-compose -f docker-compose.yaml -f docker-compose.override.dev.yaml up -d
 
 # Health check
-
 .\scripts\healthcheck.ps1
 
 # Teardown (preserve data)
-
 .\scripts\teardown.ps1
 
 # Teardown (remove all data)
-
 .\scripts\teardown.ps1 -RemoveVolumes -Backup
-```text
+```
 
 ### Staging Deployment
 
 ```powershell
-
 # Deploy with automatic backup
-
 .\scripts\deploy.ps1 -Environment staging
 
 # Monitor startup
-
 .\scripts\healthcheck.ps1 -Watch
 
 # Manual backup
-
 docker-compose exec metastore-db pg_dump -U hive metastore > backup.sql
 ```
 
 ### Production Deployment
 
 ```powershell
-
 # 1. Prepare environment
-
 Copy-Item .env.prod .env
 notepad .env  # Change ALL CHANGE_THIS passwords
 
 # 2. Verify security
-
 Get-Content .env | Select-String "CHANGE_THIS"  # Should return nothing
 
 # 3. Deploy
-
 .\scripts\deploy.ps1 -Environment prod
 
 # 4. Monitor health
-
 .\scripts\healthcheck.ps1 -Detailed
 
 # 5. Enable monitoring (optional)
-
 # Uncomment prometheus/grafana in docker-compose.override.prod.yaml
-
 docker-compose -f docker-compose.yaml -f docker-compose.override.prod.yaml up -d
-```text
+```
 
 ## Validation Steps
 
 ### Post-Deployment Validation
 
 ```powershell
-
 # 1. Check all services healthy
-
 docker-compose ps | Select-String "healthy"
 
 # 2. Verify resource limits
-
 docker stats --no-stream
 
 # 3. Test MinIO
-
 docker-compose exec minio mc ls myminio/
 
 # 4. Test Trino
-
 docker-compose exec trino trino --execute "SHOW CATALOGS;"
 
 # 5. Test UIs
-
 # MinIO: http://localhost:9001
-
 # Superset: http://localhost:8088
-
 # Airflow: http://localhost:8089
-
-```text
+```
 
 ## Benefits Delivered
 
@@ -540,53 +514,40 @@ docker-compose exec trino trino --execute "SHOW CATALOGS;"
 **If you have existing stack running:**
 
 ```powershell
-
 # 1. Backup current state
-
 .\scripts\teardown.ps1 -Backup
 
 # 2. Pull latest changes
-
 git pull origin main
 
 # 3. Choose environment
-
 Copy-Item .env.dev .env  # or .env.staging, .env.prod
 
 # 4. Deploy new stack
-
 .\scripts\deploy.ps1 -Environment dev
 
 # 5. Verify migration
-
 .\scripts\healthcheck.ps1
-```text
+```
 
 **If migrating from manual setup:**
 
 ```powershell
-
 # 1. Backup manually
-
 docker-compose down
 
 # 2. Update repository
-
 git pull origin main
 
 # 3. Configure environment
-
 Copy-Item .env.dev .env
 notepad .env  # Review and customize
 
 # 4. Deploy with new infrastructure
-
 .\scripts\deploy.ps1 -Environment dev
 
 # 5. Restore data if needed
-
 # (Follow restore procedures in DEPLOYMENT.md)
-
 ```
 
 ## Future Enhancements

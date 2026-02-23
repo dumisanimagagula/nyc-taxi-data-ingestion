@@ -141,7 +141,7 @@ NYC Taxi Data Lakehouse Tests (70 total)
           └─── Code Quality (2 tests)
                ├─ Module docstring
                └─ DateTime imports
-```text
+```
 
 ## Execution Flow
 
@@ -227,7 +227,7 @@ Test Execution with Fixtures:
              ├─ temp_logs_dir
              └─ reset_environment
                 └─ {Save env} → {Run test} → {Restore env}
-```text
+```
 
 ## Test Markers Decision Tree
 
@@ -299,7 +299,7 @@ gold/
 │   └── build_gold_layer.py    [Target: 80%]
 └── models/
     └── *.sql                   [Manual validation]
-```text
+```
 
 ## Common Test Commands Map
 

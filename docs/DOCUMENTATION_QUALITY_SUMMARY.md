@@ -91,26 +91,21 @@ SQL:        SELECT|INSERT|UPDATE|DELETE
 JSON:       opening brace {
 Bash:       export|cd|ls
 Default:    text (fallback)
-```text
+```
 
 **Usage**:
 
 ```powershell
-
 # Scan and report issues
-
 .\scripts\lint-markdown.ps1
 
 # Preview fixes without applying
-
 .\scripts\lint-markdown.ps1 -DryRun -Fix
 
 # Apply all automatic fixes
-
 .\scripts\lint-markdown.ps1 -Fix
 
 # Scan specific directory
-
 .\scripts\lint-markdown.ps1 -Path .\docs -Fix
 ```
 
@@ -138,20 +133,18 @@ Default:    text (fallback)
 
 **Before**:
 
-```markdown
-```yaml
+````markdown
+```
 docker-compose up -d
 ```
-
-```text
+````
 
 **After**:
-```markdown
-```bash
+````markdown
+```powershell
 docker-compose up -d
 ```
-
-```text
+````
 
 **MD022 Fixes (Heading Spacing)**:
 - **1,500+ spacing issues** automatically fixed across 29 files
@@ -164,7 +157,6 @@ docker-compose up -d
 Some text here
 
 ## Next Section
-
 More text immediately after
 ```
 
@@ -174,9 +166,8 @@ More text immediately after
 Some text here
 
 ## Next Section
-
 More text immediately after
-```text
+```
 
 ### 4. Manual Review Items
 
@@ -264,16 +255,14 @@ TODOs/Placeholders:   5 (benign)
 - [ ] Spell check passed
 - [ ] Links verified working
 - [ ] Run: `.\scripts\lint-markdown.ps1` before committing
-```text
+```
 
 ### Continuous Integration
 
 **Recommended CI Check**:
 
 ```yaml
-
 # .github/workflows/docs-quality.yml
-
 name: Documentation Quality
 on: [push, pull_request]
 jobs:

@@ -79,8 +79,7 @@ docs/
 ├── DATASETS_CONFIG.md                 # No changes needed
 
 └── DAG_CONSOLIDATION_SUMMARY.md       # This document
-
-```text
+```
 
 ---
 
@@ -91,15 +90,12 @@ docs/
 ### Airflow UI Changes Needed
 
 ```bash
-
 # The DAG ID has changed from:
-
 nyc_taxi_medallion_pipeline_v2
 
 # To:
-
 nyc_taxi_medallion_pipeline
-```text
+```
 
 ### Required Actions
 
@@ -133,44 +129,33 @@ nyc_taxi_medallion_pipeline
 ### 1. Verify DAG Loads Correctly
 
 ```bash
-
 # Check for import errors
-
 docker exec lakehouse-airflow airflow dags list-import-errors
 
 # Verify DAG exists
-
 docker exec lakehouse-airflow airflow dags list | grep nyc_taxi
 
 # Expected output:
-
 # nyc_taxi_medallion_pipeline
-
 ```
 
 ### 2. Test DAG Structure
 
 ```bash
-
 # Test DAG
-
 docker exec lakehouse-airflow airflow dags test nyc_taxi_medallion_pipeline 2024-01-01
 
 # Should complete without errors
-
-```text
+```
 
 ### 3. Run Tests
 
 ```bash
-
 # Run updated tests
-
 pytest tests/airflow/test_dag_validation.py -v
 
 # All tests should pass
-
-```text
+```
 
 ---
 
@@ -179,25 +164,19 @@ pytest tests/airflow/test_dag_validation.py -v
 If issues occur, you can restore the old version:
 
 ```bash
-
 # 1. Copy archived version back
-
 cp airflow/dags/archive/nyc_taxi_medallion_dag_v1_archived_20260211.py \
    airflow/dags/nyc_taxi_medallion_dag_old.py
 
 # 2. Pause current DAG
-
 airflow dags pause nyc_taxi_medallion_pipeline
 
 # 3. Unpause old DAG
-
 airflow dags unpause nyc_taxi_medallion_dag_old
 
 # 4. Investigate and fix issues
-
 # 5. Re-deploy fixed version
-
-```text
+```
 
 ---
 

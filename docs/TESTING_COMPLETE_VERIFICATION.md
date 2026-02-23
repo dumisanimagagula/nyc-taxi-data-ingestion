@@ -150,9 +150,7 @@
 ### Test Data Generation
 
 ```python
-
 # 100 realistic NYC taxi trip records
-
 sample_taxi_data: pd.DataFrame
   ├─ VendorID: 1-2
   ├─ Datetime: pickup < dropoff, 5-120 minute trips
@@ -163,21 +161,18 @@ sample_taxi_data: pd.DataFrame
   └─ Payment type: 1-4
 
 # Same data with introduced flaws
-
 sample_taxi_data_with_quality_issues
   ├─ 5% null passenger_count
   ├─ 2% negative fare_amount
   ├─ 3% zero trip_distance
   ├─ 2% invalid passenger_count >6
   └─ 1% impossible values (999.99)
-```text
+```
 
 ### Test Fixtures
 
 ```python
-
 # Session-Scoped (expensive to create)
-
 spark_session          # SparkSession(local[2], 1GB)
 
 faker_instance        # Faker() for data generation
@@ -185,7 +180,6 @@ faker_instance        # Faker() for data generation
 test_data_dir         # tempfile.TemporaryDirectory()
 
 # Function-Scoped (fresh per test)
-
 sample_taxi_data      # 100 taxi records
 
 sample_taxi_data_with_quality_issues
@@ -202,8 +196,7 @@ temp_logs_dir         # Logs directory
 reset_environment     # Auto-use isolation
 
 mock_pipeline_run_id  # Example: test_run_20240115_143022
-
-```text
+```
 
 ### Test Organization
 
@@ -233,17 +226,13 @@ DAG Tests (Fast - 1-2 seconds)
 ### Quick Start
 
 ```bash
-
 # Install dependencies
-
 pip install -r requirements.txt
 
 # Run all tests
-
 pytest
 
 # Run specific categories
-
 pytest -m unit                 # Fast
 
 pytest -m e2e                  # Comprehensive
@@ -251,35 +240,28 @@ pytest -m e2e                  # Comprehensive
 pytest -m "not slow"           # CI/CD safe
 
 # With coverage
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
 open htmlcov/index.html
-```text
+```
 
 ### Common Commands
 
 ```bash
-
 # Development (fast feedback)
-
 pytest -m unit -v -s
 
 # CI/CD (no slow tests)
-
 pytest -m "not slow" --cov=src --cov=bronze --cov=silver --cov=gold
 
 # Full validation (comprehensive)
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
 
 # Parallel (fastest)
-
 pytest -n auto
 
 # Specific test
-
 pytest tests/e2e/test_medallion_pipeline.py::TestFullMedallionPipeline
-```text
+```
 
 ---
 

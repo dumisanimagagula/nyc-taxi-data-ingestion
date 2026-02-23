@@ -64,7 +64,7 @@ This document covers the improved Airflow DAG design for the NYC Taxi Lakehouse 
 ┌────────▼──────────┐
 │ Success Notify    │
 └───────────────────┘
-```text
+```
 
 ### Key Improvements Over v1
 
@@ -126,40 +126,32 @@ This document covers the improved Airflow DAG design for the NYC Taxi Lakehouse 
 Configure these via Airflow UI (`Admin > Variables`) or CLI:
 
 ```bash
-
 # Environment Configuration
-
 airflow variables set AIRFLOW_ENV "dev"  # or staging, prod
 
 # Paths
-
 airflow variables set CONFIG_BASE_PATH "/app/config"
 airflow variables set PIPELINE_CONFIG_PATH "/app/config/pipelines/lakehouse_config.yaml"
 airflow variables set DATASETS_CONFIG_PATH "/app/config/datasets/datasets.yaml"
 
 # Spark Configuration
-
 airflow variables set SPARK_MASTER_URL "spark://spark-master:7077"
 
 # Hive Metastore
-
 airflow variables set HIVE_METASTORE_URI "thrift://hive-metastore:9083"
 
 # MinIO/S3 Configuration
-
 airflow variables set MINIO_ENDPOINT "http://minio:9000"
 airflow variables set S3_ACCESS_KEY "minio"
 airflow variables set S3_SECRET_KEY "minio123"
 
 # Feature Flags
-
 airflow variables set ENABLE_DATA_QUALITY '{"value": true}' --json
 airflow variables set ENABLE_LINEAGE '{"value": true}' --json
 
 # Alerting
-
 airflow variables set ALERT_EMAILS "data-engineering@company.com,ops@company.com"
-```text
+```
 
 ### Variables JSON Import
 
@@ -186,7 +178,7 @@ Import all at once:
 
 ```bash
 airflow variables import config/airflow/variables_dev.json
-```text
+```
 
 ### Environment-Specific Variables
 
@@ -240,7 +232,7 @@ airflow connections add spark_default \
   --conn-host spark-master \
   --conn-port 7077 \
   --conn-extra '{"deploy-mode": "client", "spark-home": "/opt/spark", "spark-binary": "spark-submit"}'
-```text
+```
 
 #### Environment-Specific Connections
 
@@ -250,7 +242,7 @@ airflow connections add spark_default \
   --conn-type spark \
   --conn-host localhost \
   --conn-port 7077
-```text
+```
 
 **Production** (YARN):
 ```bash
@@ -267,7 +259,7 @@ airflow connections add spark_k8s \
   --conn-type spark \
   --conn-host k8s://https://kubernetes.default.svc:443 \
   --conn-extra '{"deploy-mode": "cluster", "namespace": "spark-jobs"}'
-```text
+```
 
 ---
 
@@ -310,7 +302,7 @@ environment_overrides:
     default_enabled: true
     quality_checks_required: true
     fail_on_quality_error: true
-```text
+```
 
 ### Adding a New Dataset
 
@@ -320,8 +312,6 @@ environment_overrides:
 ```yaml
 datasets:
   # ... existing datasets ...
-
-  
   - name: hvfhv_taxi  # NEW
 
     enabled: true
@@ -344,7 +334,7 @@ datasets:
     scheduling:
       enabled: true
       frequency: weekly
-```text
+```
 
 3. **No DAG code changes needed!** The DAG will automatically create tasks for this dataset on the next run.
 
@@ -357,7 +347,6 @@ Simply change `enabled: false`:
     enabled: false  # Dataset will be skipped
 
     # ... rest of config ...
-
 ```
 
 ### Priority Ordering
@@ -384,9 +373,7 @@ Identify hardcoded values in `nyc_taxi_medallion_dag.py`:
 Export current values to Airflow Variables:
 
 ```bash
-
 # Create variables file
-
 cat > config/airflow/variables_migration.json << 'EOF'
 {
   "AIRFLOW_ENV": "dev",
@@ -402,9 +389,8 @@ cat > config/airflow/variables_migration.json << 'EOF'
 EOF
 
 # Import
-
 airflow variables import config/airflow/variables_migration.json
-```text
+```
 
 ### Step 3: Configure Spark Connection
 
@@ -414,35 +400,28 @@ airflow connections add spark_default \
   --conn-host spark-master \
   --conn-port 7077 \
   --conn-extra '{"deploy-mode": "client", "spark-home": "/opt/spark"}'
-```text
+```
 
 ### Step 4: Create Datasets Configuration
 
 ```bash
-
 # Copy datasets config
-
 cp config/datasets/datasets.yaml.example config/datasets/datasets.yaml
 
 # Edit to match your current datasets
-
 vi config/datasets/datasets.yaml
-```text
+```
 
 ### Step 5: Test in Development
 
 ```bash
-
 # Pause old DAG
-
 airflow dags pause nyc_taxi_medallion_dag
 
 # Unpause new DAG
-
 airflow dags unpause nyc_taxi_medallion_pipeline
 
 # Trigger test run
-
 airflow dags test nyc_taxi_medallion_pipeline 2024-01-01
 ```
 
@@ -458,18 +437,14 @@ Check:
 ### Step 7: Cutover to Production
 
 ```bash
-
 # Delete old DAG (after backup)
-
 mv airflow/dags/nyc_taxi_medallion_dag.py airflow/dags/archive/
 
 # Rename new DAG (optional)
-
 mv airflow/dags/nyc_taxi_medallion_dag.py airflow/dags/nyc_taxi_medallion_dag.py
 
 # Update dag_id in file if renamed
-
-```text
+```
 
 ### Rollback Plan
 
@@ -530,7 +505,7 @@ layers:
 data_quality:
   enabled: true
   fail_on_error: true
-```text
+```
 
 **Result**: New DAG `taxi_zones_refresh_pipeline` appears in Airflow UI!
 
@@ -568,7 +543,7 @@ def sla_miss_callback(dag, task_list, blocking_task_list, slas, blocking_tis):
         subject=f"SLA Missed: {dag.dag_id}",
         message=f"Tasks: {[t.task_id for t in task_list]}"
     )
-```text
+```
 
 ### Failure Alerts
 
@@ -603,9 +578,8 @@ def task_failure_alert(context):
     ).execute(context=context)
 
 # Add to default_args
-
 default_args['on_failure_callback'] = task_failure_alert
-```text
+```
 
 ### Metrics Collection
 
@@ -619,13 +593,12 @@ def _update_lineage_tracking(**context):
     tracker = LineageTracker()
     
     # Record metrics
-
     tracker.record_metric("pipeline_duration", context['dag_run'].duration)
     tracker.record_metric("bronze_rows", bronze_row_count)
     tracker.record_metric("silver_rows", silver_row_count)
     tracker.record_metric("gold_rows", gold_row_count)
     tracker.record_metric("dq_score", data_quality_score)
-```text
+```
 
 ### Dashboard Integration
 
@@ -638,7 +611,7 @@ def send_metrics(**context):
     statsd.histogram('pipeline.duration', context['dag_run'].duration)
     statsd.increment('pipeline.success')
     statsd.gauge('pipeline.data_quality_score', dq_score)
-```text
+```
 
 **Prometheus**:
 
@@ -662,19 +635,15 @@ pipeline_success = Counter('pipeline_success_total', 'Total successful runs')
 **Diagnosis**:
 
 ```bash
-
 # Check if Spark master is running
-
 docker ps | grep spark-master
 
 # Check Spark master logs
-
 docker logs lakehouse-spark-master
 
 # Test connection manually
-
 telnet spark-master 7077
-```text
+```
 
 **Solutions**:
 1. Restart Spark master: `docker-compose restart spark-master`
@@ -688,19 +657,15 @@ telnet spark-master 7077
 
 **Diagnosis**:
 ```bash
-
 # Check metastore status
-
 docker ps | grep hive-metastore
 
 # Check logs
-
 docker logs lakehouse-hive-metastore
 
 # Test connection
-
 telnet hive-metastore 9083
-```text
+```
 
 **Solutions**:
 1. Restart metastore: `docker-compose restart hive-metastore`
@@ -714,19 +679,15 @@ telnet hive-metastore 9083
 
 **Diagnosis**:
 ```bash
-
 # Check MinIO status
-
 docker ps | grep minio
 
 # Check health endpoint
-
 curl http://minio:9000/minio/health/live
 
 # Check logs
-
 docker logs lakehouse-minio
-```text
+```
 
 **Solutions**:
 1. Restart MinIO: `docker-compose restart minio`
@@ -742,13 +703,10 @@ docker logs lakehouse-minio
 
 **Solution**:
 ```bash
-
 # List connections
-
 airflow connections list
 
 # Add connection
-
 airflow connections add spark_default \
   --conn-type spark \
   --conn-host spark-master \
@@ -768,7 +726,6 @@ airflow connections add spark_default \
    SparkSubmitOperator(
        jars="/opt/spark/jars/iceberg-spark-runtime.jar",
        # Instead of packages=...
-
    )
    ```
 
@@ -811,19 +768,15 @@ airflow connections add spark_default \
 **Diagnosis**:
 
 ```bash
-
 # Check datasets config exists
-
 ls -la config/datasets/datasets.yaml
 
 # Verify YAML syntax
-
 python -c "import yaml; yaml.safe_load(open('config/datasets/datasets.yaml'))"
 
 # Check Airflow can read file
-
 docker exec lakehouse-airflow cat /app/config/datasets/datasets.yaml
-```text
+```
 
 **Solutions**:
 1. Ensure file exists at correct path
@@ -837,19 +790,15 @@ docker exec lakehouse-airflow cat /app/config/datasets/datasets.yaml
 
 **Diagnosis**:
 ```python
-
 # In Airflow UI, check Variables
-
 DATASETS_CONFIG_PATH
 
 # Verify config content
-
 cat $DATASETS_CONFIG_PATH
 
 # Check environment overrides
-
 grep -A 10 "environment_overrides" $DATASETS_CONFIG_PATH
-```text
+```
 
 **Solutions**:
 1. Review `environment_overrides` section
@@ -864,22 +813,18 @@ grep -A 10 "environment_overrides" $DATASETS_CONFIG_PATH
 
 **Diagnosis**:
 ```bash
-
 # Check variable value
-
 airflow variables get ENABLE_DATA_QUALITY
 
 # Verify it's boolean
-
 python -c "from airflow.models import Variable; print(type(Variable.get('ENABLE_DATA_QUALITY', deserialize_json=True)))"
-```text
+```
 
 **Solutions**:
 1. Set variable correctly:
    ```bash
    airflow variables set ENABLE_DATA_QUALITY '{"value": true}' --json
    # OR
-
    airflow variables set ENABLE_DATA_QUALITY true
    ```
 
@@ -895,17 +840,13 @@ python -c "from airflow.models import Variable; print(type(Variable.get('ENABLE_
 **Solutions**:
 
 ```bash
-
 # List all variables
-
 airflow variables list
 
 # Import all at once
-
 airflow variables import config/airflow/variables_dev.json
 
 # Set individual variable
-
 airflow variables set SPARK_MASTER_URL "spark://spark-master:7077"
 ```
 
@@ -916,15 +857,12 @@ airflow variables set SPARK_MASTER_URL "spark://spark-master:7077"
 **Solution**:
 
 ```bash
-
 # Use --json flag for booleans
-
 airflow variables set ENABLE_DATA_QUALITY true --json
 
 # Or use deserialize_json in code
-
 Variable.get("ENABLE_DATA_QUALITY", deserialize_json=True)
-```text
+```
 
 ### Performance Issues
 
@@ -949,7 +887,6 @@ Variable.get("ENABLE_DATA_QUALITY", deserialize_json=True)
     num_executors=4  # Increased from 2
 
     executor_memory="8g"  # Increased from 4g
-
     ```
   - Optimize Spark SQL queries
   - Enable broadcast joins for small tables
@@ -971,7 +908,7 @@ dag = DAG(
     catchup=False,      # Don't backfill
 
 )
-```text
+```
 
 ---
 
@@ -980,30 +917,23 @@ dag = DAG(
 ### 1. Use Environment-Specific Variables
 
 ```bash
-
 # Development
-
 airflow variables import config/airflow/variables_dev.json
 
 # Production
-
 airflow variables import config/airflow/variables_prod.json
-```text
+```
 
 ### 2. Test DAGs Before Deployment
 
 ```bash
-
 # Validate DAG syntax
-
 python airflow/dags/nyc_taxi_medallion_dag.py
 
 # Test DAG structure
-
 airflow dags test nyc_taxi_medallion_pipeline 2024-01-01
 
 # Run specific task
-
 airflow tasks test nyc_taxi_medallion_pipeline check_spark_master 2024-01-01
 ```
 

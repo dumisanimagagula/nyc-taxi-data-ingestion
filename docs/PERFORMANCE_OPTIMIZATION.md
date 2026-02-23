@@ -169,7 +169,6 @@ def _read_bronze(self) -> DataFrame:
 # After adding partition columns (year, month)
 def _apply_transformations(self, df: DataFrame) -> DataFrame:
     # ... rename, cast, add derived columns ...
-    
     # Cache after partition columns added
     if performance_config.get("cache_after_transform", False):
         df = df.cache()

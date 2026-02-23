@@ -33,17 +33,13 @@ Comprehensive testing infrastructure implemented for NYC Taxi Data Lakehouse wit
 ## 🚀 Quick Start
 
 ```bash
-
 # Install dependencies (if not done)
-
 pip install -r requirements.txt
 
 # Run all tests
-
 pytest
 
 # Run specific category
-
 pytest -m unit                  # Fast (~1s)
 
 pytest -m integration           # Medium (~5-10s)
@@ -51,10 +47,9 @@ pytest -m integration           # Medium (~5-10s)
 pytest -m e2e                  # Comprehensive (~20-30s)
 
 # View coverage
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
 open htmlcov/index.html
-```text
+```
 
 ---
 
@@ -98,7 +93,7 @@ tests/
 │   └── test_medallion_pipeline.py (6 tests - Full pipeline)
 └── airflow/
     └── test_dag_validation.py    (21 tests - DAG structure)
-```text
+```
 
 ---
 
@@ -211,40 +206,31 @@ reports = terminal, HTML (htmlcov/), XML (coverage.xml)
 ## 💻 Common Commands
 
 ```bash
-
 # All tests
-
 pytest
 
 # Fast tests only
-
 pytest -m unit
 pytest -m unit -m airflow
 
 # Parallel execution
-
 pytest -n auto
 
 # With coverage
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
 
 # Specific test
-
 pytest tests/unit/test_spark_jobs.py::TestBronzeIngestion::test_ingest_parquet_schema_validation
 
 # Show slowest
-
 pytest --durations=10
 
 # Verbose
-
 pytest -v -s
 
 # CI/CD safe (no slow tests)
-
 pytest -m "not slow" --cov=src --cov=bronze --cov=silver --cov=gold
-```text
+```
 
 ---
 
@@ -271,17 +257,14 @@ import pytest
 class TestMyComponent:
     def test_something(self, spark_session, sample_taxi_data):
         # Arrange
-
         df = spark_session.createDataFrame(sample_taxi_data)
         
         # Act
-
         result = my_function(df)
         
         # Assert
-
         assert result.count() == 100
-```text
+```
 
 ### Available Markers
 
@@ -301,15 +284,13 @@ class TestMyComponent:
 @pytest.mark.data_quality     # DQ framework
 
 @pytest.mark.config           # Configuration
-
-```text
+```
 
 ---
 
 ## 🔍 Architecture Coverage
 
 ```
-
 Bronze Layer (Ingestion)
 ├─ Schema validation ✅
 ├─ Type casting ✅
@@ -344,8 +325,7 @@ Airflow
 ├─ DAG structure ✅
 ├─ Dependencies ✅
 └─ Configuration ✅
-
-```text
+```
 
 ---
 
@@ -422,8 +402,7 @@ faker 28.4.1               # Test data generation
 freezegun 1.5.1            # Time mocking
 
 responses 0.25.3           # HTTP mocking
-
-```text
+```
 
 ---
 
@@ -449,7 +428,6 @@ pytest                           # Run all tests
 
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
 open htmlcov/index.html         # View coverage
-
 ```
 
 ---

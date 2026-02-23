@@ -32,43 +32,35 @@ The NYC Taxi Lakehouse platform provides a robust configuration management syste
 from src.config_loader import load_lakehouse_config
 
 # Load configuration for current environment (from LAKEHOUSE_ENV variable)
-
 config = load_lakehouse_config()
 
 # Load for specific environment
-
 config = load_lakehouse_config(environment='production')
 
 # Load with strict validation (raises exception on errors)
-
 config = load_lakehouse_config(
     config_name='lakehouse_config.yaml',
     environment='production',
     validate=True,
     strict=True
 )
-```text
+```
 
 ### Validate Configuration
 
 ```bash
-
 # Validate main configuration
-
 python scripts/validate_config.py
 
 # Validate specific file
-
 python scripts/validate_config.py config/pipelines/custom_config.yaml
 
 # Validate all configs
-
 python scripts/validate_config.py --all
 
 # Show detailed config information
-
 python scripts/validate_config.py --info
-```text
+```
 
 ---
 
@@ -105,9 +97,7 @@ config/
 **Location**: `config/pipelines/lakehouse_config.yaml`
 
 ```yaml
-
 # Configuration version (REQUIRED as of v1.0)
-
 version: "1.0"
 
 pipeline:
@@ -127,8 +117,7 @@ bronze:
     batch_processing: true
 
 # ... more configuration ...
-
-```text
+```
 
 ### Environment Overrides
 
@@ -147,8 +136,7 @@ bronze:
 infrastructure:
   spark:
     master: "local[*]"         # Local Spark for development
-
-```text
+```
 
 **Production** (`production.yaml`):
 ```yaml
@@ -167,8 +155,7 @@ infrastructure:
 
   s3:
     endpoint: "${S3_ENDPOINT}"  # Production S3 endpoint
-
-```text
+```
 
 ---
 
@@ -183,13 +170,10 @@ The system detects the current environment from:
 3. Default: `development`
 
 ```bash
-
 # Set environment for current session
-
 export LAKEHOUSE_ENV=production
 
 # Or in .env file
-
 echo "LAKEHOUSE_ENV=production" >> .env
 ```
 
@@ -212,7 +196,7 @@ infrastructure:
     master: "local[*]"
     executor_memory: "2g"
     driver_memory: "1g"
-```text
+```
 
 Environment override (production):
 ```yaml
@@ -220,7 +204,7 @@ infrastructure:
   spark:
     master: "spark://cluster:7077"
     executor_memory: "4g"
-```text
+```
 
 Merged result:
 ```yaml
@@ -231,8 +215,7 @@ infrastructure:
     executor_memory: "4g"            # Overridden
 
     driver_memory: "1g"             # Preserved from base
-
-```text
+```
 
 ### Environment Variable Expansion
 
@@ -270,32 +253,28 @@ All configurations are validated against JSON schemas stored in `config/schemas/
 
 ```python
 config = load_lakehouse_config(validate=True, strict=False)
-```text
+```
 
 **Strict**: Raise exception on validation errors
 ```python
 config = load_lakehouse_config(validate=True, strict=True)
-```text
+```
 
 **No validation**: Skip validation (not recommended)
 ```python
 config = load_lakehouse_config(validate=False)
-```text
+```
 
 ### CLI Validation
 
 ```bash
-
 # Validate single file
-
 python scripts/validate_config.py config/pipelines/lakehouse_config.yaml
 
 # Validate all configs in directory
-
 python scripts/validate_config.py --all
 
 # Verbose output with detailed errors
-
 python scripts/validate_config.py --verbose
 ```
 
@@ -305,7 +284,7 @@ python scripts/validate_config.py --verbose
 
 ```text
 ✗ 'version' is a required property at root
-```text
+```
 **Fix**: Add `version: "1.0"` to config
 
 **Invalid value:**
@@ -319,7 +298,7 @@ python scripts/validate_config.py --verbose
 
 ```text
 ✗ 100000 is not of type 'string' at bronze.ingestion.chunk_size
-```text
+```
 **Fix**: Correct the value to expected type
 
 ---
@@ -336,8 +315,7 @@ version: "1.0"  # REQUIRED
 pipeline:
   name: "my_pipeline"
   # ...
-
-```text
+```
 
 ### Supported Versions
 
@@ -355,7 +333,6 @@ from src.enhanced_config_loader import EnhancedConfigLoader
 
 loader = EnhancedConfigLoader(auto_migrate=True)
 config = loader.load_config()  # Auto-migrates if needed
-
 ```
 
 ### Manual Migration
@@ -366,24 +343,20 @@ from src.config_version_manager import ConfigVersionManager
 manager = ConfigVersionManager()
 
 # Check if migration needed
-
 if manager.needs_migration(config_version):
     # Migrate to current version
-
     new_config = manager.migrate_config(old_config)
-```text
+```
 
 ### Version Compatibility
 
 ```python
-
 # Check compatibility
-
 is_compatible, message = manager.validate_compatibility(config)
 
 if not is_compatible:
     print(f"Config incompatible: {message}")
-```text
+```
 
 ---
 
@@ -396,13 +369,11 @@ if not is_compatible:
 version: "1.0"
 pipeline:
   name: "my_pipeline"
-```text
+```
 
 ❌ **Bad:**
 ```yaml
-
 # Missing version
-
 pipeline:
   name: "my_pipeline"
 ```
@@ -416,7 +387,7 @@ infrastructure:
   s3:
     access_key: "${AWS_ACCESS_KEY_ID}"
     secret_key: "${AWS_SECRET_ACCESS_KEY}"
-```text
+```
 
 ❌ **Bad:**
 ```yaml
@@ -425,25 +396,22 @@ infrastructure:
     access_key: "AKIAIOSFODNN7EXAMPLE"  # Hardcoded!
 
     secret_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-```text
+```
 
 ### 3. Validate Before Deploying
 
 ```bash
-
 # Always validate before production deployment
-
 python scripts/validate_config.py config/pipelines/lakehouse_config.yaml
 
 # Exit code 0 = valid, 1 = invalid
-
 if [ $? -eq 0 ]; then
   echo "✓ Config valid, deploying..."
 else
   echo "✗ Config invalid, aborting!"
   exit 1
 fi
-```text
+```
 
 ### 4. Use Environment-Specific Overrides
 
@@ -454,7 +422,6 @@ Keep base config environment-agnostic:
 bronze:
   ingestion:
     chunk_size: 50000  # Reasonable default
-
 ```
 
 **Development** (environments/development.yaml):
@@ -463,16 +430,14 @@ bronze:
 bronze:
   ingestion:
     chunk_size: 5000   # Small for fast tests
-
-```text
+```
 
 **Production** (environments/production.yaml):
 ```yaml
 bronze:
   ingestion:
     chunk_size: 200000  # Large for efficiency
-
-```text
+```
 
 ### 5. Document Custom Configurations
 
@@ -488,23 +453,18 @@ bronze:
 silver:
   quality_checks:
     fail_on_error: false  # Allow pipeline to complete for investigation
-
-```text
+```
 
 ### 6. Test Configurations in Lower Environments
 
 ```bash
-
 # Test in dev first
-
 LAKEHOUSE_ENV=development python scripts/validate_config.py
 
 # Then staging
-
 LAKEHOUSE_ENV=staging python scripts/validate_config.py
 
 # Finally production
-
 LAKEHOUSE_ENV=production python scripts/validate_config.py
 ```
 
@@ -527,7 +487,7 @@ def load_lakehouse_config(
     validate: bool = True,
     strict: bool = False
 ) -> Dict[str, Any]
-```text
+```
 
 **Parameters:**
 - `config_name`: Configuration filename in `config/pipelines/`
@@ -554,7 +514,7 @@ def validate_lakehouse_config(
     config_dict: Optional[Dict[str, Any]] = None,
     verbose: bool = True
 ) -> bool
-```text
+```
 
 **Parameters:**
 - `config_path`: Path to config file (optional)
@@ -572,7 +532,7 @@ Get metadata about a configuration.
 **Signature:**
 ```python
 def get_config_info(config: Dict[str, Any]) -> Dict[str, Any]
-```text
+```
 
 **Returns:**
 ```python
@@ -606,7 +566,7 @@ def __init__(
     strict_validation: bool = False,
     auto_migrate: bool = True
 )
-```text
+```
 
 **Methods:**
 
@@ -715,14 +675,14 @@ import yaml
 
 with open('config.yaml') as f:
     config = yaml.safe_load(f)
-```text
+```
 
 **New approach:**
 ```python
 from src.config_loader import load_lakehouse_config
 
 config = load_lakehouse_config(validate=True)
-```text
+```
 
 **Benefits:**
 - Automatic validation
@@ -755,7 +715,7 @@ class MyPipeline:
             config_name=config_name,
             validate=validate
         )
-```text
+```
 
 ---
 
@@ -764,50 +724,40 @@ class MyPipeline:
 ### Development Workflow
 
 ```bash
-
 # 1. Create/edit config
-
 vim config/pipelines/my_pipeline.yaml
 
 # 2. Validate
-
 python scripts/validate_config.py config/pipelines/my_pipeline.yaml
 
 # 3. Test in dev
-
 export LAKEHOUSE_ENV=development
 python my_pipeline.py
 
 # 4. Push to git
-
 git add config/
 git commit -m "Add new pipeline config"
-```text
+```
 
 ### Production Deployment
 
 ```bash
-
 # 1. Validate all configs
-
 python scripts/validate_config.py --all
 if [ $? -ne 0 ]; then exit 1; fi
 
 # 2. Deploy to production
-
 export LAKEHOUSE_ENV=production
 
 # 3. Run with strict validation
-
 python -c "
 from src.config_loader import load_lakehouse_config
 config = load_lakehouse_config(strict=True)
 " && echo "✓ Config valid"
 
 # 4. Start pipeline
-
 airflow dags trigger nyc_taxi_medallion_dag
-```text
+```
 
 ---
 

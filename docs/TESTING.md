@@ -42,8 +42,7 @@ faker 28.4.1            # Test data generation
 freezegun 1.5.1         # Time mocking
 
 responses 0.25.3        # HTTP mocking
-
-```text
+```
 
 ## Test Structure
 
@@ -77,8 +76,7 @@ tests/
 │   └── test_dag_validation.py          # DAG structure & dependencies
 
 └── test_validation.py                  # Existing validation tests
-
-```text
+```
 
 ### pytest.ini Configuration
 
@@ -110,36 +108,29 @@ markers =
 
 ```bash
 pytest
-```text
+```
 
 ### Run Specific Test Suites
 
 ```bash
-
 # Unit tests only (fast)
-
 pytest -m unit
 
 # Integration tests
-
 pytest -m integration
 
 # E2E tests (slow)
-
 pytest -m e2e
 
 # Data quality tests
-
 pytest -m data_quality
 
 # Spark tests
-
 pytest -m spark
 
 # Airflow DAG tests
-
 pytest tests/airflow/
-```text
+```
 
 ### Run Specific Test Files
 
@@ -147,7 +138,7 @@ pytest tests/airflow/
 pytest tests/unit/test_spark_jobs.py
 pytest tests/e2e/test_medallion_pipeline.py
 pytest tests/integration/test_data_quality_integration.py
-```text
+```
 
 ### Run Specific Test Functions
 
@@ -158,48 +149,37 @@ pytest tests/unit/test_spark_jobs.py::TestBronzeIngestion::test_ingest_parquet_s
 ### Parallel Execution
 
 ```bash
-
 # Run tests in parallel (-n auto uses all CPU cores)
-
 pytest -n auto
 
 # Run tests in parallel with max 4 workers
-
 pytest -n 4
-```text
+```
 
 ### Show Slowest Tests
 
 ```bash
-
 # Show top 20 slowest tests
-
 pytest --durations=20
-```text
+```
 
 ### Verbose Output
 
 ```bash
-
 # Show test execution details
-
 pytest -vv
 
 # Show print statements in tests
-
 pytest -s
-```text
+```
 
 ### Filter by Keyword
 
 ```bash
-
 # Run tests matching "bronze"
-
 pytest -k bronze
 
 # Run tests NOT matching "slow"
-
 pytest -k "not slow"
 ```
 
@@ -239,7 +219,7 @@ pytest -k "not slow"
 ```bash
 pytest -m unit
 pytest tests/unit/
-```text
+```
 
 ### Integration Tests (`-m integration`)
 
@@ -263,7 +243,7 @@ pytest tests/unit/
 ```bash
 pytest -m integration
 pytest tests/integration/
-```text
+```
 
 ### End-to-End Tests (`-m e2e`)
 
@@ -289,7 +269,7 @@ pytest tests/integration/
 ```bash
 pytest -m e2e
 pytest tests/e2e/
-```text
+```
 
 ### Airflow DAG Tests (`-m airflow`)
 
@@ -325,7 +305,7 @@ pytest tests/airflow/
 
 ```bash
 pytest -m data_quality
-```text
+```
 
 ### Slow Tests (`-m slow`)
 
@@ -337,15 +317,12 @@ pytest -m data_quality
 
 **Running**:
 ```bash
-
 # Exclude slow tests (for CI/CD)
-
 pytest -m "not slow"
 
 # Run only slow tests
-
 pytest -m slow
-```text
+```
 
 ## Writing Tests
 
@@ -363,19 +340,16 @@ class TestMyComponent:
     def test_basic_functionality(self, spark_session: SparkSession):
         """Test that component works correctly"""
         # Arrange
-
         test_data = [{'id': 1, 'value': 'test'}]
         df = spark_session.createDataFrame(test_data)
         
         # Act
-
         result = my_function(df)
         
         # Assert
-
         assert result.count() == 1
         assert result.columns == expected_columns
-```text
+```
 
 ### Available Fixtures
 
@@ -384,15 +358,11 @@ class TestMyComponent:
 ```python
 spark_session: SparkSession
     # Spark session with local[2] execution
-
     # Use for tests that require real Spark operations
-
 faker_instance: Faker
     # Faker for generating realistic test data
-
 test_data_dir: Path
     # Temporary directory for test artifacts (auto-cleanup)
-
 ```
 
 **Function-Scoped** (new instance per test):
@@ -400,44 +370,29 @@ test_data_dir: Path
 ```python
 sample_taxi_data: pd.DataFrame
     # 100 valid NYC taxi trip records
-
     # Usage: spark_session.createDataFrame(sample_taxi_data)
-
 sample_taxi_data_with_quality_issues: pd.DataFrame
     # Sample data with added quality issues:
-
     # - 5% null passenger_count
-
     # - 2% negative fare_amount
-
     # - 3% zero trip_distance
-
     # - 2% invalid passenger_count (>6)
-
     # - 1% impossible trip_distance (999.99)
-
 sample_lakehouse_config: dict
     # Complete medallion config with bronze, silver, gold sections
-
 mock_s3_config: dict
     # S3/MinIO configuration for testing
-
 mock_metastore_config: dict
     # Hive Metastore configuration for testing
-
 temp_output_dir: Path
     # Temporary directory for test outputs
-
 temp_logs_dir: Path
     # Temporary directory for test logs
-
 reset_environment: fixture
     # Auto-use fixture that isolates environment variables
-
 mock_pipeline_run_id: str
     # Example: "test_run_20240115_143022"
-
-```text
+```
 
 ### Using Fixtures
 
@@ -457,7 +412,7 @@ def test_with_mocking(mocker):
     mock_func = mocker.patch('module.function')
     mock_func.return_value = 'mocked'
     assert mock_func() == 'mocked'
-```text
+```
 
 ### Test Markers
 
@@ -477,25 +432,20 @@ def test_with_mocking(mocker):
 @pytest.mark.data_quality  # Data quality test
 
 @pytest.mark.config        # Configuration test
-
-```text
+```
 
 ## Coverage
 
 ### Generate Coverage Reports
 
 ```bash
-
 # Terminal report (default)
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=term-missing
 
 # HTML report (open htmlcov/index.html in browser)
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=html
 
 # XML report (for CI/CD tools)
-
 pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=xml
 ```
 
@@ -517,24 +467,20 @@ pytest --cov=src --cov=bronze --cov=silver --cov=gold --cov-report=xml
 coverage_coverage.py 85% (17/20)
 data_quality/metrics.py 92% (61/66)
 data_quality/error_tracking.py 88% (44/50)
-```text
+```
 
 **HTML** (interactive):
 ```bash
-
 # Open in browser
-
 open htmlcov/index.html
-```text
+```
 
 ### Excluding Code from Coverage
 
 ```python
 def untestable_function():
     # pragma: no cover
-
     # This code won't be counted in coverage
-
     pass
 ```
 
@@ -571,7 +517,7 @@ jobs:
       uses: codecov/codecov-action@v2
       with:
         files: ./coverage.xml
-```text
+```
 
 ### Pre-Commit Hook
 
@@ -589,58 +535,48 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [commit]
-```text
+```
 
 ## Best Practices
 
 ### 1. Test Organization
 
 ```python
-
 # Group related tests in classes
-
 @pytest.mark.unit
 class TestBronzeIngestion:
     def test_parquet_loading(self): ...
     def test_null_handling(self): ...
     def test_duplicates(self): ...
-```text
+```
 
 ### 2. Descriptive Test Names
 
 ```python
-
 # Good ✅
-
 def test_ingest_parquet_validates_schema()
 
 # Bad ❌
-
 def test_ingest()
 ```
 
 ### 3. Use Fixtures for Setup
 
 ```python
-
 # Good ✅
-
 def test_transformation(spark_session, sample_taxi_data):
     df = spark_session.createDataFrame(sample_taxi_data)
 
 # Bad ❌
-
 def test_transformation():
     spark = SparkSession.builder.getOrCreate()
     df = spark.createDataFrame([...])
-```text
+```
 
 ### 4. Test Data Reality
 
 ```python
-
 # Good ✅ (realistic NYC taxi data)
-
 sample_taxi_data = pd.DataFrame({
     'fare_amount': [15.50, 22.30, 8.75],
     'pickup_location_id': [161, 237, 48],  # Valid zones 1-265
@@ -648,43 +584,36 @@ sample_taxi_data = pd.DataFrame({
 })
 
 # Bad ❌ (unrealistic)
-
 sample_data = pd.DataFrame({
     'fare_amount': ['abc', 'def'],
     'location_id': [99999, -1]
 })
-```text
+```
 
 ### 5. Arrange-Act-Assert Pattern
 
 ```python
 def test_something(spark_session, sample_data):
     # Arrange (setup)
-
     df = spark_session.createDataFrame(sample_data)
     
     # Act (execute)
-
     result = transform(df)
     
     # Assert (verify)
-
     assert result.count() == 100
-```text
+```
 
 ### 6. Mock External Dependencies
 
 ```python
 def test_with_mock(mocker):
     # Good ✅ (deterministic)
-
     mock_api = mocker.patch('requests.get')
     mock_api.return_value.json.return_value = {'status': 'ok'}
     
     # Bad ❌ (flaky, hits real API)
-
     # result = requests.get('https://real-api.com')
-
 ```
 
 ## Troubleshooting
@@ -692,40 +621,28 @@ def test_with_mock(mocker):
 ### Import Errors
 
 ```bash
-
 # Ensure project root is in PYTHONPATH
-
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 pytest
-```text
+```
 
 ### Spark Issues
 
 ```bash
-
 # Spark session errors usually indicate:
-
 # 1. Java not installed: Install Java 11+
-
 # 2. Memory issues: Reduce shuffle partitions in conftest.py
-
 # 3. Warehouse issues: Check tempfile is writable
-
-```text
+```
 
 ### Timeout Issues
 
 ```bash
-
 # Test took too long (>300s)
-
 # 1. Add @pytest.mark.slow decorator
-
 # 2. Run with: pytest -m "not slow"
-
 # 3. Check for infinite loops in transformation logic
-
-```text
+```
 
 ### Flaky Tests
 
@@ -733,15 +650,10 @@ Signs: Tests pass sometimes, fail other times
 
 Solutions:
 ```python
-
 # 1. Check for race conditions (async operations)
-
 # 2. Mock time-dependent code with freezegun
-
 # 3. Add explicit waits for async operations
-
 # 4. Check for test isolation issues
-
 def test_time_dependent(freezegun_freeze_time):
     """Mock time to control test behavior"""
     with freezegun.freeze_time("2024-01-15"):

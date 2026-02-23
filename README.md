@@ -65,16 +65,14 @@ A **complete open-source data platform** that demonstrates modern data engineeri
         │  • Manages dependencies                     │
         │  • Retry logic & monitoring                 │
         └─────────────────────────────────────────────┘
-```text
+```
 
 ## ✨ Key Features
 
 ### 🔧 **Config-Driven Everything**
 
 ```yaml
-
 # config/pipelines/lakehouse_config.yaml
-
 bronze:
   source:
     type: http
@@ -95,7 +93,7 @@ gold:
     - name: daily_trip_stats
       aggregations:
         group_by: [year, month, location]
-```text
+```
 
 ### 🎯 **Separation of Concerns**
 
@@ -128,18 +126,14 @@ gold:
 ### 1. Clone and Start
 
 ```powershell
-
 # Clone repository
-
 git clone <repo-url>
 cd nyc-taxi-data-ingestion
 
 # Start all services
-
 docker compose up -d
 
 # Wait ~60 seconds for services to initialize
-
 ```
 
 Note: If you pulled changes that pin `airflow-db` to a static IP, run `docker compose down` once so Docker can recreate the network before starting again.
@@ -147,16 +141,13 @@ Note: If you pulled changes that pin `airflow-db` to a static IP, run `docker co
 ### 2. Initialize Platform
 
 ```powershell
-
 # Run setup script (Windows)
-
 .\scripts\setup_lakehouse.ps1
 
 # Or Linux/Mac
-
 chmod +x scripts/setup_lakehouse.sh
 ./scripts/setup_lakehouse.sh
-```text
+```
 
 ### 3. Access UIs
 
@@ -177,19 +168,15 @@ chmod +x scripts/setup_lakehouse.sh
 
 **Option 2: Manual Execution**
 ```powershell
-
 # Bronze layer
-
 docker exec lakehouse-ingestor python /app/bronze/ingestors/ingest_to_iceberg.py --config /app/config/pipelines/lakehouse_config.yaml
 
 # Silver layer
-
 docker exec lakehouse-spark-master spark-submit /opt/spark/jobs/bronze_to_silver.py
 
 # Gold layer
-
 docker exec lakehouse-dbt dbt run --profiles-dir /usr/app
-```text
+```
 
 ### 5. Query Data
 
@@ -204,7 +191,7 @@ SELECT * FROM iceberg.silver.nyc_taxi_clean LIMIT 10;
 
 -- Gold layer (analytics)
 SELECT * FROM iceberg.gold.daily_trip_stats LIMIT 10;
-```text
+```
 
 ## 📁 Project Structure
 
@@ -288,7 +275,7 @@ bronze:
     storage:
       format: parquet
       partition_by: [year, month]
-```text
+```
 
 #### **Silver Layer Config**
 
@@ -296,34 +283,29 @@ bronze:
 silver:
   transformations:
     # Rename columns
-
     rename_columns:
       tpep_pickup_datetime: pickup_datetime
       
     # Type casting
-
     cast_columns:
       fare_amount: decimal(10,2)
       
     # Filters
-
     filters:
       - "trip_distance > 0"
       - "fare_amount > 0"
       
     # Deduplication
-
     dedupe:
       enabled: true
       partition_by: [year, month]
       order_by: ["pickup_datetime DESC"]
       
     # Derived columns
-
     derived_columns:
       - name: trip_duration_minutes
         expression: "(unix_timestamp(dropoff_datetime) - unix_timestamp(pickup_datetime)) / 60"
-```text
+```
 
 #### **Gold Layer Config**
 
@@ -367,11 +349,9 @@ gold:
 ### Airflow DAG Structure
 
 ```python
-
 # airflow/dags/nyc_taxi_medallion_dag.py
-
 ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
-```text
+```
 
 **Linear execution**:
 1. Python ingestor writes to Bronze (Iceberg)
@@ -384,9 +364,7 @@ ingest_to_bronze >> transform_to_silver >> build_gold_models >> quality_checks
 ### Change Data to Ingest
 
 ```yaml
-
 # config/pipelines/lakehouse_config.yaml
-
 bronze:
   source:
     params:
@@ -395,33 +373,28 @@ bronze:
       month: 6          # ← Change this
 
       taxi_type: green  # ← Or this (yellow, green, fhv)
-
-```text
+```
 
 Then trigger the DAG in Airflow.
 
 ### Add a New Transformation
 
 ```yaml
-
 # config/pipelines/lakehouse_config.yaml
-
 silver:
   transformations:
     derived_columns:
       - name: is_weekend         # ← New column
 
         expression: "dayofweek(pickup_datetime) IN (1, 7)"
-```text
+```
 
 Re-run the Silver layer task.
 
 ### Add a New Gold Model
 
 ```yaml
-
 # config/pipelines/lakehouse_config.yaml
-
 gold:
   models:
     - name: weekend_vs_weekday_stats  # ← New model
@@ -461,17 +434,14 @@ Re-run the Gold layer task, or add a new dbt SQL file.
 ### Using Trino CLI
 
 ```bash
-
 # Connect to Trino
-
 docker exec -it lakehouse-trino trino
 
 # Query any layer
-
 SELECT * FROM iceberg.bronze.nyc_taxi_raw WHERE year = 2021 LIMIT 10;
 SELECT * FROM iceberg.silver.nyc_taxi_clean WHERE trip_distance > 10;
 SELECT * FROM iceberg.gold.daily_trip_stats ORDER BY total_revenue DESC;
-```text
+```
 
 ### Using Python
 
@@ -488,7 +458,7 @@ conn = connect(
 cursor = conn.cursor()
 cursor.execute("SELECT * FROM daily_trip_stats LIMIT 10")
 rows = cursor.fetchall()
-```text
+```
 
 ## 🚀 Production Deployment
 
@@ -512,15 +482,12 @@ This platform is designed to run on Kubernetes. Key considerations:
 ## 🧪 Testing
 
 ```powershell
-
 # Run tests
-
 docker exec lakehouse-ingestor pytest /app/tests/
 
 # Test data quality
-
 docker exec lakehouse-dbt dbt test --profiles-dir /usr/app
-```text
+```
 
 ## 📚 Documentation
 

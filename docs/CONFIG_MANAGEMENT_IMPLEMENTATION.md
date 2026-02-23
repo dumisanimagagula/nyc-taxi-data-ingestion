@@ -70,7 +70,7 @@ Comprehensive configuration management system has been implemented for the NYC T
     "description": "Number of records per batch"
   }
 }
-```text
+```
 
 ---
 
@@ -92,8 +92,7 @@ bronze:
 infrastructure:
   spark:
     master: "local[*]"         # Local Spark
-
-```text
+```
 
 **Purpose**: Fast iteration during development
 
@@ -114,7 +113,7 @@ infrastructure:
 
   s3:
     endpoint: "${STAGING_S3_ENDPOINT}"
-```text
+```
 
 **Purpose**: Pre-production validation
 
@@ -175,7 +174,7 @@ if not is_valid:
     errors = validator.get_validation_errors(config)
     for error in errors:
         print(f"Error: {error}")
-```text
+```
 
 ---
 
@@ -200,14 +199,12 @@ from src.config_version_manager import ConfigVersionManager
 manager = ConfigVersionManager()
 
 # Check compatibility
-
 is_compatible, msg = manager.validate_compatibility(config)
 
 # Migrate if needed
-
 if manager.needs_migration(version):
     new_config = manager.migrate_config(config)
-```text
+```
 
 ---
 
@@ -232,13 +229,11 @@ from src.environment_config_manager import EnvironmentConfigManager
 manager = EnvironmentConfigManager()
 
 # Auto-detect environment
-
 env = manager.get_current_environment()
 
 # Load with environment overrides
-
 config = manager.load_config_for_environment()
-```text
+```
 
 ---
 
@@ -263,11 +258,9 @@ from src.enhanced_config_loader import EnhancedConfigLoader
 loader = EnhancedConfigLoader(strict_validation=False, auto_migrate=True)
 
 # Load with all features enabled
-
 config = loader.load_config(environment='production')
 
 # Get config metadata
-
 info = loader.get_config_info(config)
 print(f"Version: {info['version']}, Valid: {info['is_valid']}")
 ```
@@ -293,7 +286,7 @@ import yaml
 
 with open('config.yaml') as f:
     config = yaml.safe_load(f)
-```text
+```
 
 **After**:
 ```python
@@ -304,7 +297,7 @@ config = load_lakehouse_config(
     validate=True,
     strict=True
 )
-```text
+```
 
 ---
 
@@ -351,25 +344,19 @@ config = load_lakehouse_config(
 
 **Usage**:
 ```bash
-
 # Validate main config
-
 python scripts/validate_config.py
 
 # Validate specific file
-
 python scripts/validate_config.py config/pipelines/custom.yaml
 
 # Validate all configs
-
 python scripts/validate_config.py --all
 
 # Show config info
-
 python scripts/validate_config.py --info
 
 # Validate for production
-
 python scripts/validate_config.py --environment production
 ```
 
@@ -415,14 +402,11 @@ Validating: config/pipelines/lakehouse_config.yaml
 **Added**:
 
 ```yaml
-
 # Version field (REQUIRED as of v1.0)
-
 version: "1.0"
 
 # Rest of configuration...
-
-```text
+```
 
 ---
 
@@ -444,16 +428,14 @@ packaging
 from src.config_loader import load_lakehouse_config
 
 # Development (auto-detected from LAKEHOUSE_ENV)
-
 config = load_lakehouse_config()
 
 # Production with strict validation
-
 config = load_lakehouse_config(
     environment='production',
     strict=True
 )
-```text
+```
 
 ---
 
@@ -463,7 +445,6 @@ config = load_lakehouse_config(
 #!/bin/bash
 
 # Pre-flight check script
-
 echo "Validating configuration..."
 python scripts/validate_config.py config/pipelines/lakehouse_config.yaml
 
@@ -474,30 +455,25 @@ else
     echo "✗ Config invalid, aborting!"
     exit 1
 fi
-```text
+```
 
 ---
 
 ### 3. Environment-Specific Settings
 
 ```bash
-
 # Development
-
 export LAKEHOUSE_ENV=development
 python run_pipeline.py  # Uses dev settings (small chunks, local Spark)
 
 # Staging
-
 export LAKEHOUSE_ENV=staging
 python run_pipeline.py  # Uses staging settings (medium chunks, staging cluster)
 
 # Production
-
 export LAKEHOUSE_ENV=production
 python run_pipeline.py  # Uses production settings (large chunks, prod cluster)
-
-```text
+```
 
 ---
 
@@ -529,7 +505,7 @@ Configuration Info:
 
 ```text
 ERROR: Invalid taxi_type 'invalid' - pipeline failed after 30 minutes
-```text
+```
 
 **After**: Errors found during validation (instant feedback)
 ```text
@@ -543,25 +519,18 @@ ERROR: Invalid taxi_type 'invalid' - pipeline failed after 30 minutes
 **Before**: Single config with commented sections
 
 ```yaml
-
 # chunk_size: 10000  # Development
-
 chunk_size: 100000   # Production
-
-```text
+```
 
 **After**: Clean environment-specific overrides
 ```yaml
-
 # Base: config/pipelines/lakehouse_config.yaml
-
 chunk_size: 50000  # Default
 
 # Production: config/environments/production.yaml
-
 chunk_size: 100000  # Override for production
-
-```text
+```
 
 ---
 
@@ -571,14 +540,12 @@ chunk_size: 100000  # Override for production
 ```yaml
 s3:
   access_key: "AKIAIOSFODNN7EXAMPLE"  # Security risk!
-
-```text
+```
 
 **After**: Environment variables
 ```yaml
 s3:
   access_key: "${AWS_ACCESS_KEY_ID}"  # Secure
-
 ```
 
 ---
@@ -590,11 +557,9 @@ s3:
 **After**: Automatic migration from old versions
 
 ```python
-
 # Old config (v0.9) automatically migrated to v1.0
-
 config = load_lakehouse_config(auto_migrate=True)
-```text
+```
 
 ---
 
@@ -612,7 +577,7 @@ config = load_lakehouse_config(auto_migrate=True)
     "description": "Number of records per batch"
   }
 }
-```text
+```
 
 ---
 
@@ -645,7 +610,7 @@ def test_environment_override():
     """Test environment configs override base"""
     config = load_lakehouse_config(environment='production')
     assert config['bronze']['ingestion']['chunk_size'] == 100000
-```text
+```
 
 ---
 
@@ -658,14 +623,13 @@ def test_environment_override():
 version: "1.0"
 
 # ... existing config ...
-
 ```
 
 **Step 2**: Validate existing configs
 
 ```bash
 python scripts/validate_config.py --all
-```text
+```
 
 **Step 3**: Fix validation errors
 - Update invalid values
@@ -674,28 +638,22 @@ python scripts/validate_config.py --all
 
 **Step 4**: Update code to use validated loader (optional but recommended)
 ```python
-
 # Old
-
 with open('config.yaml') as f:
     config = yaml.safe_load(f)
 
 # New
-
 from src.config_loader import load_lakehouse_config
 config = load_lakehouse_config()
-```text
+```
 
 **Step 5**: Create environment-specific overrides (optional)
 ```yaml
-
 # config/environments/development.yaml
-
 bronze:
   ingestion:
     chunk_size: 5000  # Smaller for dev
-
-```text
+```
 
 ---
 

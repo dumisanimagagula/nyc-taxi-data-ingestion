@@ -60,7 +60,7 @@ This document describes the infrastructure setup for the NYC Taxi Data Lakehouse
 │  │ (PostgreSQL) │  │ (PostgreSQL) │  │ (PostgreSQL) │         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 └────────────────────────────────────────────────────────────────┘
-```text
+```
 
 ## Service Details
 
@@ -191,15 +191,12 @@ All PostgreSQL databases use the same resource allocation:
 
 **Usage:**
 ```bash
-
 # Copy environment file
-
 cp .env.dev .env
 
 # Start stack
-
 docker-compose -f docker-compose.yaml -f docker-compose.override.dev.yaml up
-```text
+```
 
 ### Staging (.env.staging)
 
@@ -218,13 +215,10 @@ docker-compose -f docker-compose.yaml -f docker-compose.override.dev.yaml up
 
 **Usage:**
 ```bash
-
 # Copy environment file
-
 cp .env.staging .env
 
 # Start stack
-
 docker-compose -f docker-compose.yaml -f docker-compose.override.staging.yaml up
 ```
 
@@ -249,17 +243,13 @@ docker-compose -f docker-compose.yaml -f docker-compose.override.staging.yaml up
 **Usage:**
 
 ```bash
-
 # Copy and CUSTOMIZE environment file
-
 cp .env.prod .env
 
 # EDIT .env to change ALL passwords marked with CHANGE_THIS
-
 # Start stack
-
 docker-compose -f docker-compose.yaml -f docker-compose.override.prod.yaml up -d
-```text
+```
 
 ## Startup Sequence
 
@@ -292,7 +282,7 @@ The services have strict dependencies and health checks to ensure proper startup
 6. Application Layer (parallel)
    ├── Ingestor (depends on minio + hive-metastore health)
    └── dbt (depends on trino health)
-```text
+```
 
 **Expected Startup Time:**
 - Development: ~3-5 minutes
@@ -498,29 +488,22 @@ Production override includes optional Prometheus + Grafana stack:
 ### Diagnostic Commands
 
 ```bash
-
 # View all container status
-
 docker-compose ps
 
 # View logs for specific service
-
 docker-compose logs -f <service-name>
 
 # Check resource usage
-
 docker stats
 
 # Verify network connectivity
-
 docker-compose exec <service> ping <other-service>
 
 # Check health status
-
 docker inspect <container-name> | grep -A 10 Health
 
 # Restart specific service
-
 docker-compose restart <service-name>
 ```
 
