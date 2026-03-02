@@ -525,6 +525,14 @@ MIT License - See LICENSE file
 - Apache Iceberg, Spark, Airflow communities
 - dbt Labs for dbt-core
 
+### Inspiration
+
+Shout-out to these amazing data engineering content creators whose work inspired this project:
+
+- [Alexey Grigorev](https://github.com/alexeygrigorev) - Data engineering and ML courses
+- [Baraa Khatib Salkini](https://github.com/DataWithBaraa) - Data engineering tutorials and projects
+- [Zach Wilson](https://github.com/EcZachly) - Data engineering and analytics content
+
 ---
 
 **Built with ❤️ for modern data engineering**
