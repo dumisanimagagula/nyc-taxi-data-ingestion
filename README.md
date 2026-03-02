@@ -2,6 +2,8 @@
 
 **Production-ready, config-driven data lakehouse platform** implementing a complete medallion architecture (Bronze → Silver → Gold) for NYC Taxi data.
 
+![Architecture Diagram](architecture/nyc-taxi-data-ingestion-architecture.jpg)
+
 > 🏗️ **Key Principle**: Engineers only update YAML files - no code changes needed to ingest or transform data.
 
 ## 🎯 What This Is
