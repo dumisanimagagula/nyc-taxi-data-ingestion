@@ -4,12 +4,15 @@ NYC Taxi Medallion Architecture DAG - Production Version
 Production-ready, decoupled, config-driven data pipeline
 
 FEATURES:
-✅ SparkSubmitOperator instead of BashOperator (no Docker coupling)
+✅ PythonOperator for Bronze (no Docker-in-Docker coupling)
+✅ SparkSubmitOperator for Silver/Gold (decoupled Spark submission)
 ✅ Health check sensors before task execution
 ✅ Dynamic task generation for multiple datasets
 ✅ Externalized configurations (no hardcoded paths)
 ✅ Environment parameterization (dev/staging/prod)
 ✅ Proper error handling and retries
+✅ SLA miss alerts and on-failure callbacks
+✅ Task-level resource pools per layer (bronze/silver/gold)
 ✅ Data quality validation with Great Expectations
 ✅ Lineage tracking integration
 
@@ -26,18 +29,20 @@ Author: Data Engineering Team
 Version: Production-Ready
 """
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any
 
-from airflow.models import Variable
-from airflow.operators.bash import BashOperator
+from airflow.models import Pool, Variable
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.sensors.python import PythonSensor
 from airflow.utils.task_group import TaskGroup
 
-from airflow import DAG
+from airflow import DAG, settings
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # CONFIGURATION - Externalized from code
@@ -90,6 +95,69 @@ SPARK_CONF = {
     "spark.jars.ivy": "/tmp/.ivy2",
 }
 
+# ============================================================================
+# RESOURCE POOLS - Concurrency limits per layer
+# ============================================================================
+
+LAYER_POOLS = {
+    "bronze": {"name": "bronze_pool", "slots": 4, "description": "Bronze layer ingestion tasks"},
+    "silver": {"name": "silver_pool", "slots": 3, "description": "Silver layer Spark transforms"},
+    "gold": {"name": "gold_pool", "slots": 2, "description": "Gold layer aggregation tasks"},
+}
+
+
+def _ensure_pools_exist():
+    """Create resource pools if they don't already exist."""
+    session = settings.Session()
+    try:
+        for cfg in LAYER_POOLS.values():
+            if not session.query(Pool).filter(Pool.pool == cfg["name"]).first():
+                session.add(Pool(pool=cfg["name"], slots=cfg["slots"], description=cfg["description"]))
+        session.commit()
+    finally:
+        session.close()
+
+
+_ensure_pools_exist()
+
+
+# ============================================================================
+# CALLBACKS - SLA miss and on-failure handlers
+# ============================================================================
+
+
+def _on_failure_callback(context):
+    """Callback executed when any task fails.
+
+    Logs structured failure info and can be extended for Slack/PagerDuty.
+    """
+    ti = context.get("task_instance")
+    dag_id = context.get("dag").dag_id
+    task_id = ti.task_id if ti else "unknown"
+    execution_date = context.get("execution_date")
+    exception = context.get("exception")
+
+    msg = (
+        f"TASK FAILURE | dag={dag_id} task={task_id} "
+        f"execution_date={execution_date} error={exception}"
+    )
+    logger.error(msg)
+
+    # In production, fire a Slack / PagerDuty alert:
+    # from airflow.providers.slack.hooks.slack_webhook import SlackWebhookHook
+    # SlackWebhookHook(slack_webhook_conn_id="slack_alerts").send(text=msg)
+
+
+def _sla_miss_callback(dag, task_list, blocking_task_list, slas, blocking_tis):
+    """Callback executed when a task exceeds its SLA."""
+    task_names = ", ".join(t.task_id for t in task_list)
+    msg = (
+        f"SLA MISS | dag={dag.dag_id} tasks=[{task_names}] "
+        f"blocking={[t.task_id for t in blocking_tis]}"
+    )
+    logger.warning(msg)
+
+
 # Default arguments for all tasks
 default_args = {
     "owner": "data-engineering",
@@ -100,6 +168,8 @@ default_args = {
     "retries": 2,
     "retry_delay": timedelta(minutes=5),
     "execution_timeout": timedelta(hours=2),
+    "on_failure_callback": _on_failure_callback,
+    "sla": timedelta(hours=1),
 }
 
 # ============================================================================
@@ -217,6 +287,8 @@ with DAG(
     start_date=datetime(2024, 1, 1),
     catchup=False,
     max_active_runs=1,
+    concurrency=8,  # Max parallel tasks across the entire DAG run
+    sla_miss_callback=_sla_miss_callback,
     tags=["nyc-taxi", "medallion", "lakehouse", "production", "config-driven"],
     params={
         "environment": ENVIRONMENT,
@@ -266,16 +338,13 @@ with DAG(
         for dataset in datasets:
             dataset_name = dataset["name"]
 
-            # Use BashOperator to execute ingestion in lakehouse-ingestor container
-            ingest_task = BashOperator(
+            # PythonOperator calls the ingestor in-process — no Docker coupling
+            ingest_task = PythonOperator(
                 task_id=f"ingest_{dataset_name}",
-                bash_command="""
-                docker exec lakehouse-ingestor python /app/bronze/ingestors/ingest_to_iceberg.py \
-                    --config /app/config/pipelines/lakehouse_config.yaml \
-                    --dataset """
-                + dataset_name
-                + """
-                """,
+                python_callable=_run_bronze_ingestion,
+                op_kwargs={"dataset": dataset},
+                pool=LAYER_POOLS["bronze"]["name"],
+                sla=timedelta(minutes=45),
             )
 
     # ========================================================================
@@ -309,6 +378,8 @@ with DAG(
                 driver_memory=SPARK_DRIVER_MEMORY,
                 executor_memory=SPARK_EXECUTOR_MEMORY,
                 total_executor_cores=SPARK_TOTAL_EXECUTOR_CORES,
+                pool=LAYER_POOLS["silver"]["name"],
+                sla=timedelta(hours=1),
             )
 
     # ========================================================================
@@ -335,6 +406,8 @@ with DAG(
             driver_memory=SPARK_DRIVER_MEMORY,
             executor_memory=SPARK_EXECUTOR_MEMORY,
             total_executor_cores=SPARK_TOTAL_EXECUTOR_CORES,
+            pool=LAYER_POOLS["gold"]["name"],
+            sla=timedelta(hours=1, minutes=30),
         )
 
     # ========================================================================
@@ -422,20 +495,20 @@ def _run_bronze_ingestion(dataset: dict[str, Any], **context):
     """
     Execute bronze layer ingestion without Docker coupling
 
-    In production, import this from bronze.ingestors.ingest_to_iceberg
+    Calls the BronzeIngestor directly in-process.
     """
     import sys
 
     sys.path.insert(0, "/app")
 
-    from bronze.ingestors.ingest_to_iceberg import run_ingestion
+    from bronze.ingestors.ingest_to_iceberg import BronzeIngestor
 
-    print(f"Ingesting dataset: {dataset['name']}")
-    run_ingestion(
+    logger.info("Ingesting dataset: %s", dataset["name"])
+    ingestor = BronzeIngestor(
         config_path=PIPELINE_CONFIG_PATH,
-        dataset_name=dataset["name"],
-        environment=ENVIRONMENT,
+        dataset=dataset["name"],
     )
+    ingestor.ingest()
 
 
 def _update_lineage_tracking(context):

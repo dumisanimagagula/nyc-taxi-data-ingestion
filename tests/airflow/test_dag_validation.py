@@ -10,7 +10,9 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 # Airflow imports
-from airflow.models import DagBag, Variable
+from airflow.models import DagBag, Pool, Variable
+from airflow.operators.python import PythonOperator
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
 
 class TestDAGStructure:
@@ -44,7 +46,7 @@ class TestDAGStructure:
         dag = dagbag.get_dag("nyc_taxi_medallion_pipeline")
         assert dag.max_active_runs == 1
 
-def test_dag_has_tags(self, dagbag):
+    def test_dag_has_tags(self, dagbag):
         """DAG should have appropriate tags"""
         dag = dagbag.get_dag("nyc_taxi_medallion_pipeline")
         assert "nyc-taxi" in dag.tags
@@ -439,6 +441,162 @@ class TestEnvironmentConfiguration:
 
             assert env == "prod"
             assert dq_enabled is True
+
+
+class TestSLAAndCallbacks:
+    """Test SLA configuration and failure callbacks"""
+
+    @pytest.fixture(scope="class")
+    def dag(self):
+        dagbag = DagBag(dag_folder="airflow/dags", include_examples=False)
+        return dagbag.get_dag("nyc_taxi_medallion_pipeline")
+
+    def test_default_args_have_sla(self, dag):
+        """Default args should include an SLA"""
+        assert "sla" in dag.default_args
+        assert isinstance(dag.default_args["sla"], timedelta)
+
+    def test_default_args_have_on_failure_callback(self, dag):
+        """Default args should include on_failure_callback"""
+        assert "on_failure_callback" in dag.default_args
+        assert callable(dag.default_args["on_failure_callback"])
+
+    def test_dag_has_sla_miss_callback(self, dag):
+        """DAG should have sla_miss_callback configured"""
+        assert dag.sla_miss_callback is not None
+        assert callable(dag.sla_miss_callback)
+
+    def test_on_failure_callback_logs_error(self):
+        """on_failure_callback should log structured error information"""
+        from airflow.dags.nyc_taxi_medallion_dag import _on_failure_callback
+
+        mock_ti = MagicMock()
+        mock_ti.task_id = "test_task"
+        mock_dag = MagicMock()
+        mock_dag.dag_id = "test_dag"
+        context = {
+            "task_instance": mock_ti,
+            "dag": mock_dag,
+            "execution_date": "2024-01-01T00:00:00",
+            "exception": ValueError("test error"),
+        }
+
+        # Should not raise
+        _on_failure_callback(context)
+
+    def test_sla_miss_callback_logs_warning(self):
+        """sla_miss_callback should log SLA miss information"""
+        from airflow.dags.nyc_taxi_medallion_dag import _sla_miss_callback
+
+        mock_dag = MagicMock()
+        mock_dag.dag_id = "test_dag"
+        mock_task = MagicMock()
+        mock_task.task_id = "test_task"
+        mock_ti = MagicMock()
+        mock_ti.task_id = "blocking_task"
+
+        # Should not raise
+        _sla_miss_callback(mock_dag, [mock_task], [], [], [mock_ti])
+
+
+class TestDAGConcurrency:
+    """Test DAG-level concurrency settings"""
+
+    @pytest.fixture(scope="class")
+    def dag(self):
+        dagbag = DagBag(dag_folder="airflow/dags", include_examples=False)
+        return dagbag.get_dag("nyc_taxi_medallion_pipeline")
+
+    def test_dag_has_concurrency_limit(self, dag):
+        """DAG should enforce a concurrency limit"""
+        assert dag.concurrency is not None
+        assert dag.concurrency <= 16  # Reasonable upper bound
+
+
+class TestResourcePools:
+    """Test resource pool configuration per medallion layer"""
+
+    @pytest.fixture(scope="class")
+    def dag(self):
+        dagbag = DagBag(dag_folder="airflow/dags", include_examples=False)
+        return dagbag.get_dag("nyc_taxi_medallion_pipeline")
+
+    def test_pool_constants_defined(self):
+        """LAYER_POOLS dict should define bronze, silver, and gold pools"""
+        from airflow.dags.nyc_taxi_medallion_dag import LAYER_POOLS
+
+        assert "bronze" in LAYER_POOLS
+        assert "silver" in LAYER_POOLS
+        assert "gold" in LAYER_POOLS
+        for key, cfg in LAYER_POOLS.items():
+            assert "name" in cfg
+            assert "slots" in cfg
+            assert isinstance(cfg["slots"], int)
+            assert cfg["slots"] > 0
+
+    def test_bronze_tasks_use_bronze_pool(self, dag):
+        """Bronze ingestion tasks should be assigned to the bronze pool"""
+        bronze_tasks = [t for t in dag.tasks if "ingest_" in t.task_id]
+        assert len(bronze_tasks) > 0
+        for task in bronze_tasks:
+            assert task.pool == "bronze_pool"
+
+    def test_silver_tasks_use_silver_pool(self, dag):
+        """Silver transformation tasks should be assigned to the silver pool"""
+        silver_tasks = [t for t in dag.tasks if "transform_" in t.task_id and "silver" in t.task_id]
+        assert len(silver_tasks) > 0
+        for task in silver_tasks:
+            assert task.pool == "silver_pool"
+
+    def test_gold_tasks_use_gold_pool(self, dag):
+        """Gold aggregation tasks should be assigned to the gold pool"""
+        gold_tasks = [t for t in dag.tasks if "build_gold" in t.task_id]
+        assert len(gold_tasks) > 0
+        for task in gold_tasks:
+            assert task.pool == "gold_pool"
+
+
+class TestBronzePythonOperator:
+    """Test that bronze uses PythonOperator instead of BashOperator"""
+
+    @pytest.fixture(scope="class")
+    def dag(self):
+        dagbag = DagBag(dag_folder="airflow/dags", include_examples=False)
+        return dagbag.get_dag("nyc_taxi_medallion_pipeline")
+
+    def test_bronze_tasks_are_python_operators(self, dag):
+        """Bronze ingestion tasks should be PythonOperator, not BashOperator"""
+        bronze_tasks = [t for t in dag.tasks if "ingest_" in t.task_id]
+        assert len(bronze_tasks) > 0
+        for task in bronze_tasks:
+            assert isinstance(task, PythonOperator), (
+                f"Task {task.task_id} should be PythonOperator, got {type(task).__name__}"
+            )
+
+    def test_no_bash_operators_in_dag(self, dag):
+        """DAG should not contain any BashOperator tasks"""
+        from airflow.operators.bash import BashOperator
+
+        bash_tasks = [t for t in dag.tasks if isinstance(t, BashOperator)]
+        assert len(bash_tasks) == 0, (
+            f"Found BashOperator tasks: {[t.task_id for t in bash_tasks]}"
+        )
+
+    def test_bronze_callable_is_run_bronze_ingestion(self, dag):
+        """Bronze PythonOperator should call _run_bronze_ingestion"""
+        from airflow.dags.nyc_taxi_medallion_dag import _run_bronze_ingestion
+
+        bronze_tasks = [t for t in dag.tasks if "ingest_" in t.task_id]
+        for task in bronze_tasks:
+            assert task.python_callable is _run_bronze_ingestion
+
+    def test_bronze_tasks_pass_dataset_kwarg(self, dag):
+        """Bronze PythonOperator should pass the dataset dict as op_kwargs"""
+        bronze_tasks = [t for t in dag.tasks if "ingest_" in t.task_id]
+        for task in bronze_tasks:
+            assert "dataset" in task.op_kwargs
+            assert isinstance(task.op_kwargs["dataset"], dict)
+            assert "name" in task.op_kwargs["dataset"]
 
 
 # ============================================================================
