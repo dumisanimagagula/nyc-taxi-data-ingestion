@@ -1,0 +1,65 @@
+# =============================================================================
+# Lakehouse Namespace + Service Accounts with IRSA annotations
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lakehouse
+  labels:
+    app.kubernetes.io/part-of: nyc-taxi-lakehouse
+---
+# ---- Airflow Service Account -----------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: airflow
+  namespace: lakehouse
+  annotations:
+    # Replace with actual ARN from: terraform output airflow_role_arn
+    eks.amazonaws.com/role-arn: "arn:aws:iam::role/nyc-taxi-lakehouse-ENV-airflow"
+  labels:
+    app.kubernetes.io/component: orchestrator
+---
+# ---- Bronze Ingestor Service Account ---------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bronze-ingestor
+  namespace: lakehouse
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::role/nyc-taxi-lakehouse-ENV-bronze-ingestor"
+  labels:
+    app.kubernetes.io/component: ingestor
+---
+# ---- Spark Service Account -------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark
+  namespace: lakehouse
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::role/nyc-taxi-lakehouse-ENV-spark"
+  labels:
+    app.kubernetes.io/component: spark
+---
+# ---- Trino Service Account -------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trino
+  namespace: lakehouse
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::role/nyc-taxi-lakehouse-ENV-trino"
+  labels:
+    app.kubernetes.io/component: query-engine
+---
+# ---- dbt Service Account ---------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dbt
+  namespace: lakehouse
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::role/nyc-taxi-lakehouse-ENV-dbt"
+  labels:
+    app.kubernetes.io/component: transform

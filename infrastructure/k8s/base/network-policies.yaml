@@ -1,0 +1,81 @@
+# =============================================================================
+# Network Policies for Lakehouse Namespace
+# =============================================================================
+# Restricts pod-to-pod communication to only what's needed.
+# =============================================================================
+
+# Default deny all ingress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: lakehouse
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Allow Trino workers to talk to coordinator
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trino-internal
+  namespace: lakehouse
+spec:
+  podSelector:
+    matchLabels:
+      app: trino
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: trino
+      ports:
+        - port: 8080
+          protocol: TCP
+  policyTypes:
+    - Ingress
+---
+# Allow Airflow to reach Trino coordinator
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-airflow-to-trino
+  namespace: lakehouse
+spec:
+  podSelector:
+    matchLabels:
+      app: trino
+      role: coordinator
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: airflow
+      ports:
+        - port: 8080
+          protocol: TCP
+  policyTypes:
+    - Ingress
+---
+# Allow Superset to reach Trino coordinator
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-superset-to-trino
+  namespace: lakehouse
+spec:
+  podSelector:
+    matchLabels:
+      app: trino
+      role: coordinator
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: superset
+      ports:
+        - port: 8080
+          protocol: TCP
+  policyTypes:
+    - Ingress
