@@ -7,11 +7,11 @@ from datetime import timedelta
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-
 # Airflow imports
-from airflow.models import DagBag, Pool, Variable
+from airflow.models import DagBag, Variable
 from airflow.operators.python import PythonOperator
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.providers.apache.spark.operators.spark_submit import \
+    SparkSubmitOperator
 
 
 class TestDAGStructure:
@@ -50,7 +50,7 @@ class TestDAGStructure:
         dag = dagbag.get_dag("nyc_taxi_medallion_pipeline")
         assert "nyc-taxi" in dag.tags
         assert "medallion" in dag.tags
-    
+
     def test_dag_default_args(self, dagbag):
         """DAG should have correct default args"""
         dag = dagbag.get_dag("nyc_taxi_medallion_pipeline")
@@ -108,7 +108,8 @@ class TestHealthChecks:
         mock_socket.return_value = mock_sock_instance
 
         # Import and test health check function
-        from airflow.dags.nyc_taxi_medallion_dag import check_spark_master_health
+        from airflow.dags.nyc_taxi_medallion_dag import \
+            check_spark_master_health
 
         with patch.object(Variable, "get", return_value="spark://spark-master:7077"):
             result = check_spark_master_health()
@@ -124,7 +125,8 @@ class TestHealthChecks:
         mock_sock_instance.connect_ex.return_value = 1  # Connection refused
         mock_socket.return_value = mock_sock_instance
 
-        from airflow.dags.nyc_taxi_medallion_dag import check_spark_master_health
+        from airflow.dags.nyc_taxi_medallion_dag import \
+            check_spark_master_health
 
         with patch.object(Variable, "get", return_value="spark://spark-master:7077"):
             result = check_spark_master_health()
@@ -240,7 +242,8 @@ class TestBranchingLogic:
 
     def test_data_quality_branch_enabled(self):
         """Should branch to run_data_quality_checks when enabled"""
-        from airflow.dags.nyc_taxi_medallion_dag import decide_data_quality_branch
+        from airflow.dags.nyc_taxi_medallion_dag import \
+            decide_data_quality_branch
 
         with patch.object(Variable, "get", return_value=True):
             result = decide_data_quality_branch()
@@ -249,7 +252,8 @@ class TestBranchingLogic:
 
     def test_data_quality_branch_disabled(self):
         """Should branch to skip_data_quality when disabled"""
-        from airflow.dags.nyc_taxi_medallion_dag import decide_data_quality_branch
+        from airflow.dags.nyc_taxi_medallion_dag import \
+            decide_data_quality_branch
 
         with patch.object(Variable, "get", return_value=False):
             result = decide_data_quality_branch()
@@ -337,7 +341,6 @@ class TestSparkSubmitOperatorConfig:
 
     def test_spark_operators_have_correct_conn_id(self, dag):
         """All SparkSubmitOperators should use spark_default connection"""
-        from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
         spark_tasks = [t for t in dag.tasks if isinstance(t, SparkSubmitOperator)]
 
@@ -346,7 +349,6 @@ class TestSparkSubmitOperatorConfig:
 
     def test_spark_operators_have_packages(self, dag):
         """SparkSubmitOperators should have Iceberg packages"""
-        from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
         spark_tasks = [t for t in dag.tasks if isinstance(t, SparkSubmitOperator)]
 
@@ -356,7 +358,6 @@ class TestSparkSubmitOperatorConfig:
 
     def test_spark_operators_have_conf(self, dag):
         """SparkSubmitOperators should have Spark configuration"""
-        from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
         spark_tasks = [t for t in dag.tasks if isinstance(t, SparkSubmitOperator)]
 
