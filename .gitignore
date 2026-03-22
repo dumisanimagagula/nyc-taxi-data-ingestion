@@ -57,6 +57,8 @@ pgadmin/data/
 
 # Backups
 *.sql
+!gold/models/**/*.sql
+!docker-init-scripts/**/*.sql
 *.dump
 backup_*/
 

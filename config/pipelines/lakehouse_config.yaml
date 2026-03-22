@@ -157,11 +157,6 @@ silver:
         expression: "dayofweek(pickup_datetime)"
       - name: "hour_of_day"
         expression: "hour(pickup_datetime)"
-      # Partition key derived columns (required before partitioning)
-      - name: "year"
-        expression: "year(pickup_datetime)"
-      - name: "month"
-        expression: "month(pickup_datetime)"
         
   # Performance optimization for Silver
   performance:
