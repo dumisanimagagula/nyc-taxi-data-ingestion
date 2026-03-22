@@ -1,4 +1,3 @@
-"""
 """Tests for Airflow DAG Implementation
 =======================================
 Validates DAG structure, dependencies, health checks, and dynamic task generation
@@ -90,6 +89,11 @@ class TestTaskGroups:
         """Gold aggregation TaskGroup should exist"""
         task_group_ids = [tg.group_id for tg in dag.task_group.children.values() if hasattr(tg, "group_id")]
         assert "gold_aggregation" in task_group_ids
+
+    def test_iceberg_maintenance_taskgroup_exists(self, dag):
+        """Iceberg maintenance TaskGroup should exist"""
+        task_group_ids = [tg.group_id for tg in dag.task_group.children.values() if hasattr(tg, "group_id")]
+        assert "iceberg_maintenance" in task_group_ids
 
 
 class TestHealthChecks:

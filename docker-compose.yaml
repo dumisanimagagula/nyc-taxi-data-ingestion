@@ -74,11 +74,11 @@ services:
       mc mb --ignore-existing myminio/silver;
       mc mb --ignore-existing myminio/gold;
       mc mb --ignore-existing myminio/warehouse;
-      mc anonymous set download myminio/lakehouse;
-      mc anonymous set download myminio/bronze;
-      mc anonymous set download myminio/silver;
-      mc anonymous set download myminio/gold;
-      mc anonymous set download myminio/warehouse;
+      mc anonymous set none myminio/lakehouse;
+      mc anonymous set none myminio/bronze;
+      mc anonymous set none myminio/silver;
+      mc anonymous set none myminio/gold;
+      mc anonymous set none myminio/warehouse;
       exit 0;
       "
     networks:

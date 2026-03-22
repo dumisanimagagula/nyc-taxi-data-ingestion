@@ -36,7 +36,8 @@ from typing import Any
 from airflow.models import Pool, Variable
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.python import BranchPythonOperator, PythonOperator
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.providers.apache.spark.operators.spark_submit import \
+    SparkSubmitOperator
 from airflow.sensors.python import PythonSensor
 from airflow.utils.task_group import TaskGroup
 
@@ -411,6 +412,31 @@ with DAG(
         )
 
     # ========================================================================
+    # TASK GROUP 5: Iceberg Maintenance (compact, expire, orphan cleanup)
+    # ========================================================================
+
+    with TaskGroup("iceberg_maintenance", tooltip="Compact data files & expire old snapshots") as iceberg_maintenance:
+        run_maintenance = SparkSubmitOperator(
+            task_id="run_iceberg_maintenance",
+            application="/opt/airflow/scripts/iceberg_maintenance.py",
+            conn_id="spark_default",
+            conf=SPARK_CONF,
+            packages=",".join(SPARK_PACKAGES),
+            application_args=[
+                "--config",
+                PIPELINE_CONFIG_PATH,
+            ],
+            name="iceberg_maintenance",
+            verbose=True,
+            deploy_mode="client",
+            driver_memory=SPARK_DRIVER_MEMORY,
+            executor_memory=SPARK_EXECUTOR_MEMORY,
+            total_executor_cores=SPARK_TOTAL_EXECUTOR_CORES,
+            pool=LAYER_POOLS["gold"]["name"],
+            sla=timedelta(hours=1),
+        )
+
+    # ========================================================================
     # BRANCHING: Data Quality Checks (Optional)
     # ========================================================================
 
@@ -477,7 +503,7 @@ with DAG(
     # Pipeline flow with branching
     preflight_checks >> bronze_ingestion >> silver_transformation >> gold_aggregation
 
-    gold_aggregation >> data_quality_branch
+    gold_aggregation >> iceberg_maintenance >> data_quality_branch
     data_quality_branch >> [skip_data_quality, run_data_quality_checks]
 
     [skip_data_quality, run_data_quality_checks] >> lineage_branch

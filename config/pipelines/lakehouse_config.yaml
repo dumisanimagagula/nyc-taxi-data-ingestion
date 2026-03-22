@@ -618,6 +618,20 @@ data_quality:
       - "CRITICAL"
 
 # ============================================================================
+# ICEBERG MAINTENANCE - Compaction, snapshot expiry, orphan cleanup
+# ============================================================================
+maintenance:
+  enabled: true
+  # Keep snapshots for N days before expiring them
+  snapshot_retention_days: 7
+  # Target data-file size after compaction (MB)
+  compact_target_file_size_mb: 128
+  # Remove data files not referenced by any snapshot
+  remove_orphans: true
+  # Only remove orphan files older than this many hours
+  orphan_retention_hours: 72
+
+# ============================================================================
 # ORCHESTRATION - When things run (Airflow)
 # ============================================================================
 orchestration:
