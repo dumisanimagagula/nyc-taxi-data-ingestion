@@ -1,0 +1,176 @@
+{
+  "dashboard_title": "NYC Taxi - Trip Patterns Analysis",
+  "description": "Analyze NYC taxi trip patterns: daily volumes, hourly demand, distance distributions, and passenger trends across the gold layer data.",
+  "published": true,
+  "refresh_frequency": 300,
+  "color_scheme": "supersetColors",
+  "datasets": [
+    {"schema": "gold", "table": "daily_trip_stats"},
+    {"schema": "gold", "table": "hourly_location_analysis"}
+  ],
+  "charts": [
+    {
+      "slice_name": "Total Trips",
+      "description": "Overall trip count across all data",
+      "viz_type": "big_number_total",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "metric": {"label": "Total Trips", "expressionType": "SQL", "sqlExpression": "SUM(total_trips)"},
+        "y_axis_format": ",d",
+        "header_font_size": 0.4,
+        "subheader_font_size": 0.15
+      }
+    },
+    {
+      "slice_name": "Average Trip Distance",
+      "description": "Mean trip distance in miles",
+      "viz_type": "big_number_total",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "metric": {"label": "Avg Distance", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_distance)"},
+        "y_axis_format": ",.2f",
+        "subheader": "miles",
+        "header_font_size": 0.4,
+        "subheader_font_size": 0.15
+      }
+    },
+    {
+      "slice_name": "Average Trip Duration",
+      "description": "Mean trip duration in minutes",
+      "viz_type": "big_number_total",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "metric": {"label": "Avg Duration", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_duration)"},
+        "y_axis_format": ",.1f",
+        "subheader": "minutes",
+        "header_font_size": 0.4,
+        "subheader_font_size": 0.15
+      }
+    },
+    {
+      "slice_name": "Total Passengers",
+      "description": "Total passenger count across all trips",
+      "viz_type": "big_number_total",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "metric": {"label": "Total Passengers", "expressionType": "SQL", "sqlExpression": "SUM(total_passengers)"},
+        "y_axis_format": ",d",
+        "header_font_size": 0.4,
+        "subheader_font_size": 0.15
+      }
+    },
+    {
+      "slice_name": "Trips by Day of Week",
+      "description": "Total trip volume for each day of the week (1=Monday, 7=Sunday)",
+      "viz_type": "echarts_timeseries_bar",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "x_axis": "day_of_week",
+        "metrics": [{"label": "Total Trips", "expressionType": "SQL", "sqlExpression": "SUM(total_trips)"}],
+        "groupby": [],
+        "order_desc": false,
+        "row_limit": 7,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "x_axis_title": "Day of Week (1=Mon, 7=Sun)",
+        "y_axis_title": "Total Trips"
+      }
+    },
+    {
+      "slice_name": "Trip Volume by Hour of Day",
+      "description": "Hourly trip volume showing peak and off-peak demand patterns",
+      "viz_type": "echarts_timeseries_bar",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "x_axis": "hour_of_day",
+        "metrics": [{"label": "Trip Count", "expressionType": "SQL", "sqlExpression": "SUM(trip_count)"}],
+        "groupby": [],
+        "order_desc": false,
+        "row_limit": 24,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "x_axis_title": "Hour of Day (0-23)",
+        "y_axis_title": "Number of Trips"
+      }
+    },
+    {
+      "slice_name": "Monthly Trip Volume Trend",
+      "description": "Trip volume trend by year and month",
+      "viz_type": "echarts_timeseries_line",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "x_axis": "month",
+        "metrics": [{"label": "Total Trips", "expressionType": "SQL", "sqlExpression": "SUM(total_trips)"}],
+        "groupby": ["year"],
+        "order_desc": false,
+        "row_limit": 100,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "x_axis_title": "Month",
+        "y_axis_title": "Total Trips"
+      }
+    },
+    {
+      "slice_name": "Average Distance by Day of Week",
+      "description": "How trip distances vary across the week",
+      "viz_type": "echarts_timeseries_line",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "x_axis": "day_of_week",
+        "metrics": [
+          {"label": "Avg Distance", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_distance)"},
+          {"label": "Avg Duration", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_duration)"}
+        ],
+        "groupby": [],
+        "order_desc": false,
+        "row_limit": 7,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "x_axis_title": "Day of Week (1=Mon, 7=Sun)",
+        "y_axis_title": "Average Value"
+      }
+    },
+    {
+      "slice_name": "Hourly Avg Trip Duration",
+      "description": "How trip duration varies by hour of day",
+      "viz_type": "echarts_timeseries_line",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "x_axis": "hour_of_day",
+        "metrics": [{"label": "Avg Duration (min)", "expressionType": "SQL", "sqlExpression": "AVG(avg_duration)"}],
+        "groupby": [],
+        "order_desc": false,
+        "row_limit": 24,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "x_axis_title": "Hour of Day (0-23)",
+        "y_axis_title": "Avg Duration (minutes)"
+      }
+    },
+    {
+      "slice_name": "Trip Distance Range Distribution",
+      "description": "Min, max, and average distances by pickup location",
+      "viz_type": "table",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "metrics": [
+          {"label": "Total Trips", "expressionType": "SQL", "sqlExpression": "SUM(total_trips)"},
+          {"label": "Avg Distance", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_distance)"},
+          {"label": "Min Distance", "expressionType": "SQL", "sqlExpression": "MIN(min_trip_distance)"},
+          {"label": "Max Distance", "expressionType": "SQL", "sqlExpression": "MAX(max_trip_distance)"},
+          {"label": "Avg Duration", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_duration)"}
+        ],
+        "groupby": ["pickup_location_id"],
+        "order_desc": true,
+        "row_limit": 20,
+        "include_search": true,
+        "table_timestamp_format": "smart_date"
+      }
+    }
+  ],
+  "layout": {
+    "cols_per_row": 4,
+    "kpi_row": [0, 1, 2, 3],
+    "chart_rows": [[4, 5], [6, 7], [8, 9]]
+  }
+}

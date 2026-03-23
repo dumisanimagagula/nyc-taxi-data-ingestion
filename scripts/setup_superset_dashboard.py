@@ -1,20 +1,68 @@
 #!/usr/bin/env python3
 """
-Create Superset datasets, charts, and dashboard for the NYC Taxi Lakehouse.
+Automated Superset provisioning for the NYC Taxi Lakehouse.
 
-Usage:
-    docker exec -i lakehouse-superset /app/.venv/bin/python - < scripts/setup_superset_dashboard.py
+Reads dashboard JSON definitions from a directory and creates all datasources,
+datasets, charts, and dashboards via the Superset REST API.  Designed to run
+inside the Superset container on startup or ad-hoc.
+
+Usage (inside container):
+    python /app/superset_home/setup_superset_dashboard.py
+
+Usage (from host):
+    docker exec -i lakehouse-superset python /app/superset_home/setup_superset_dashboard.py
+
+Environment variables:
+    SUPERSET_URL               Base URL (default: http://localhost:8088)
+    SUPERSET_ADMIN_USERNAME    Admin username (default: admin)
+    SUPERSET_ADMIN_PASSWORD    Admin password (default: admin)
+    DASHBOARD_DIR              Path to dashboard JSON files
+                               (default: /app/superset_home/dashboards)
+    TRINO_HOST                 Trino hostname (default: lakehouse-trino)
+    TRINO_PORT                 Trino port (default: 8080)
 """
 
+import glob
 import json
+import os
+import sys
+import time
 import uuid
 
 import requests
 
-BASE = "http://localhost:8088"
+# ── Configuration ────────────────────────────────────────────────────────────
+
+BASE = os.environ.get("SUPERSET_URL", "http://localhost:8088")
+ADMIN_USER = os.environ.get("SUPERSET_ADMIN_USERNAME", "admin")
+ADMIN_PASS = os.environ.get("SUPERSET_ADMIN_PASSWORD", "admin")
+DASHBOARD_DIR = os.environ.get("DASHBOARD_DIR", "/app/superset_home/dashboards")
+TRINO_HOST = os.environ.get("TRINO_HOST", "lakehouse-trino")
+TRINO_PORT = os.environ.get("TRINO_PORT", "8080")
 DB_NAME = "Trino Iceberg"
 
+MAX_RETRIES = 30
+RETRY_DELAY = 10  # seconds
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
+
+def wait_for_superset():
+    """Block until the Superset API is responsive."""
+    print("Waiting for Superset API ...")
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            r = requests.get(f"{BASE}/health", timeout=5)
+            if r.ok:
+                print(f"  Superset healthy (attempt {attempt})")
+                return
+        except requests.ConnectionError:
+            pass
+        print(f"  Attempt {attempt}/{MAX_RETRIES} - not ready, retrying in {RETRY_DELAY}s")
+        time.sleep(RETRY_DELAY)
+    print("ERROR: Superset did not become ready in time")
+    sys.exit(1)
 
 
 def api_session():
@@ -23,8 +71,8 @@ def api_session():
     r = s.post(
         f"{BASE}/api/v1/security/login",
         json={
-            "username": "admin",
-            "password": "admin",
+            "username": ADMIN_USER,
+            "password": ADMIN_PASS,
             "provider": "db",
             "refresh": True,
         },
@@ -48,19 +96,35 @@ def api_session():
     return s
 
 
-def get_database_id(s):
-    """Find the Trino Iceberg database id."""
+def create_or_get_database(s):
+    """Register the Trino database connection or return existing id."""
     r = s.get(f"{BASE}/api/v1/database/")
     r.raise_for_status()
     for db in r.json()["result"]:
         if db["database_name"] == DB_NAME:
+            print(f"  Database exists: {DB_NAME} (id={db['id']})")
             return db["id"]
-    raise RuntimeError(f"Database '{DB_NAME}' not found in Superset")
+
+    sqlalchemy_uri = f"trino://trino@{TRINO_HOST}:{TRINO_PORT}/lakehouse"
+    payload = {
+        "database_name": DB_NAME,
+        "engine": "trino",
+        "sqlalchemy_uri": sqlalchemy_uri,
+        "expose_in_sqllab": True,
+        "allow_ctas": False,
+        "allow_cvas": False,
+        "allow_dml": False,
+        "allow_run_async": True,
+    }
+    r = s.post(f"{BASE}/api/v1/database/", json=payload)
+    r.raise_for_status()
+    db_id = r.json()["id"]
+    print(f"  Created database: {DB_NAME} (id={db_id})")
+    return db_id
 
 
 def create_dataset(s, db_id, schema, table):
     """Create (or return existing) dataset and return its id."""
-    # Check if it already exists
     q = f"?q=(filters:!((col:table_name,opr:eq,value:'{table}'),(col:schema,opr:eq,value:'{schema}')))"
     r = s.get(f"{BASE}/api/v1/dataset/{q}")
     if r.ok and r.json().get("count", 0) > 0:
@@ -75,7 +139,6 @@ def create_dataset(s, db_id, schema, table):
     }
     r = s.post(f"{BASE}/api/v1/dataset/", json=payload)
     if r.status_code == 422 and "already exists" in r.text:
-        # Fetch it
         r2 = s.get(f"{BASE}/api/v1/dataset/{q}")
         ds_id = r2.json()["result"][0]["id"]
         print(f"  Dataset already existed: {schema}.{table} (id={ds_id})")
@@ -88,13 +151,11 @@ def create_dataset(s, db_id, schema, table):
 
 def create_chart(s, name, ds_id, viz_type, params, dashboard_ids=None):
     """Create (or return existing) chart and return its id."""
-    # Check if it already exists
     q = f"?q=(filters:!((col:slice_name,opr:eq,value:'{name}')))"
     r = s.get(f"{BASE}/api/v1/chart/{q}")
     if r.ok and r.json().get("count", 0) > 0:
         ch_id = r.json()["result"][0]["id"]
         print(f"  Chart exists: {name} (id={ch_id})")
-        # Still update dashboard association if needed
         if dashboard_ids:
             s.put(f"{BASE}/api/v1/chart/{ch_id}", json={"dashboards": dashboard_ids})
         return ch_id
@@ -120,7 +181,7 @@ def create_chart(s, name, ds_id, viz_type, params, dashboard_ids=None):
     return ch_id
 
 
-def create_dashboard_empty(s, title):
+def create_dashboard_empty(s, title, published=True):
     """Create an empty dashboard and return its id."""
     q = f"?q=(filters:!((col:dashboard_title,opr:eq,value:'{title}')))"
     r = s.get(f"{BASE}/api/v1/dashboard/{q}")
@@ -131,10 +192,7 @@ def create_dashboard_empty(s, title):
 
     r = s.post(
         f"{BASE}/api/v1/dashboard/",
-        json={
-            "dashboard_title": title,
-            "published": True,
-        },
+        json={"dashboard_title": title, "published": published},
     )
     r.raise_for_status()
     dash_id = r.json()["id"]
@@ -146,9 +204,14 @@ def _uid():
     return str(uuid.uuid4())[:8]
 
 
-def update_dashboard_layout(s, dash_id, title, chart_ids, chart_names):
-    """Set the dashboard layout with all charts properly arranged."""
-    # Build proper Superset v2 position layout
+def build_dashboard_layout(s, dash_id, title, chart_ids, chart_names, layout_spec, refresh_frequency=0, color_scheme="supersetColors"):
+    """Build and apply a Superset v2 position layout from a layout spec.
+
+    layout_spec should contain:
+        cols_per_row  - number of KPI cards per row (e.g. 4)
+        kpi_row       - list of chart indices for the KPI row
+        chart_rows    - list of [idx_a, idx_b] pairs for full-width chart rows
+    """
     position = {
         "DASHBOARD_VERSION_KEY": "v2",
         "ROOT_ID": {"type": "ROOT", "id": "ROOT_ID", "children": ["GRID_ID"]},
@@ -165,42 +228,47 @@ def update_dashboard_layout(s, dash_id, title, chart_ids, chart_names):
         },
     }
 
-    cols_per_row = 2
-    col_span = 6  # out of 12
-    row_height = 50  # pixels-ish in grid units
     grid_children = []
 
-    for idx, (cid, cname) in enumerate(zip(chart_ids, chart_names)):
-        row_idx = idx // cols_per_row
-        col_idx = idx % cols_per_row
+    def add_row(indices, col_span, row_height):
         row_id = f"ROW-N-{_uid()}"
-
-        # Each chart gets its own row for simplicity, 2 per row
-        if col_idx == 0:
-            current_row_id = row_id
-            position[current_row_id] = {
-                "type": "ROW",
-                "id": current_row_id,
-                "children": [],
-                "parents": ["ROOT_ID", "GRID_ID"],
-                "meta": {"background": "BACKGROUND_TRANSPARENT"},
-            }
-            grid_children.append(current_row_id)
-
-        chart_key = f"CHART-explore-{cid}-{_uid()}"
-        position[chart_key] = {
-            "type": "CHART",
-            "id": chart_key,
+        position[row_id] = {
+            "type": "ROW",
+            "id": row_id,
             "children": [],
-            "parents": ["ROOT_ID", "GRID_ID", current_row_id],
-            "meta": {
-                "width": col_span,
-                "height": row_height,
-                "chartId": cid,
-                "sliceName": cname,
-            },
+            "parents": ["ROOT_ID", "GRID_ID"],
+            "meta": {"background": "BACKGROUND_TRANSPARENT"},
         }
-        position[current_row_id]["children"].append(chart_key)
+        for idx in indices:
+            cid = chart_ids[idx]
+            cname = chart_names[idx]
+            chart_key = f"CHART-explore-{cid}-{_uid()}"
+            position[chart_key] = {
+                "type": "CHART",
+                "id": chart_key,
+                "children": [],
+                "parents": ["ROOT_ID", "GRID_ID", row_id],
+                "meta": {
+                    "width": col_span,
+                    "height": row_height,
+                    "chartId": cid,
+                    "sliceName": cname,
+                },
+            }
+            position[row_id]["children"].append(chart_key)
+        grid_children.append(row_id)
+
+    # KPI row: small cards, typically 4 across (col_span=3 each out of 12)
+    kpi_indices = layout_spec.get("kpi_row", [])
+    cols_per_row = layout_spec.get("cols_per_row", 4)
+    kpi_col_span = 12 // max(cols_per_row, 1)
+    if kpi_indices:
+        add_row(kpi_indices, kpi_col_span, 13)
+
+    # Chart rows: pairs of 2 charts (col_span=6 each)
+    for row_indices in layout_spec.get("chart_rows", []):
+        chart_col_span = 12 // max(len(row_indices), 1)
+        add_row(row_indices, chart_col_span, 50)
 
     position["GRID_ID"]["children"] = grid_children
 
@@ -212,17 +280,100 @@ def update_dashboard_layout(s, dash_id, title, chart_ids, chart_names):
                 {
                     "timed_refresh_immune_slices": [],
                     "expanded_slices": {},
-                    "refresh_frequency": 0,
+                    "refresh_frequency": refresh_frequency,
                     "default_filters": "{}",
-                    "color_scheme": "supersetColors",
+                    "color_scheme": color_scheme,
                 }
             ),
         },
     )
     if not r.ok:
-        print(f"  Warning: dashboard layout update returned {r.status_code}: {r.text[:300]}")
+        print(f"  Warning: layout update returned {r.status_code}: {r.text[:300]}")
     else:
         print(f"  Dashboard layout updated with {len(chart_ids)} charts")
+
+
+# ── JSON-driven provisioning ─────────────────────────────────────────────────
+
+
+def load_dashboard_definitions(directory):
+    """Load all dashboard JSON files from a directory."""
+    pattern = os.path.join(directory, "*.json")
+    files = sorted(glob.glob(pattern))
+    definitions = []
+    for filepath in files:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if "dashboard_title" not in data:
+            print(f"  Skipping {os.path.basename(filepath)} (no dashboard_title)")
+            continue
+        definitions.append((filepath, data))
+    return definitions
+
+
+def provision_dashboard(s, db_id, definition):
+    """Provision a single dashboard from its JSON definition."""
+    title = definition["dashboard_title"]
+    published = definition.get("published", True)
+    refresh = definition.get("refresh_frequency", 0)
+    color_scheme = definition.get("color_scheme", "supersetColors")
+
+    # 1. Create datasets and build lookup: (schema, table) -> dataset_id
+    dataset_lookup = {}
+    for ds_spec in definition.get("datasets", []):
+        schema = ds_spec["schema"]
+        table = ds_spec["table"]
+        ds_id = create_dataset(s, db_id, schema, table)
+        dataset_lookup[(schema, table)] = ds_id
+
+    # 2. Create dashboard
+    dash_id = create_dashboard_empty(s, title, published=published)
+
+    # 3. Create charts
+    chart_ids = []
+    chart_names = []
+    for chart_spec in definition.get("charts", []):
+        slice_name = chart_spec["slice_name"]
+        viz_type = chart_spec["viz_type"]
+        ds_ref = chart_spec["dataset"]
+        ds_key = (ds_ref["schema"], ds_ref["table"])
+        ds_id = dataset_lookup.get(ds_key)
+        if ds_id is None:
+            # Dataset not in definition's list; create on-the-fly
+            ds_id = create_dataset(s, db_id, ds_ref["schema"], ds_ref["table"])
+            dataset_lookup[ds_key] = ds_id
+
+        params = dict(chart_spec.get("params", {}))
+        params["datasource"] = f"{ds_id}__table"
+        params["viz_type"] = viz_type
+
+        cid = create_chart(s, slice_name, ds_id, viz_type, params, dashboard_ids=[dash_id])
+        chart_ids.append(cid)
+        chart_names.append(slice_name)
+
+    # 4. Apply layout
+    layout_spec = definition.get("layout", {})
+    if layout_spec:
+        build_dashboard_layout(
+            s, dash_id, title, chart_ids, chart_names,
+            layout_spec, refresh_frequency=refresh, color_scheme=color_scheme,
+        )
+    else:
+        # Fallback: 2 charts per row, uniform sizing
+        fallback_layout = {
+            "cols_per_row": 2,
+            "kpi_row": [],
+            "chart_rows": [
+                list(range(i, min(i + 2, len(chart_ids))))
+                for i in range(0, len(chart_ids), 2)
+            ],
+        }
+        build_dashboard_layout(
+            s, dash_id, title, chart_ids, chart_names,
+            fallback_layout, refresh_frequency=refresh, color_scheme=color_scheme,
+        )
+
+    return dash_id, len(chart_ids)
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -230,327 +381,50 @@ def update_dashboard_layout(s, dash_id, title, chart_ids, chart_names):
 
 def main():
     print("=" * 60)
-    print("NYC Taxi Lakehouse - Superset Dashboard Setup")
+    print("NYC Taxi Lakehouse - Automated Superset Provisioning")
     print("=" * 60)
+    print(f"  Superset URL:    {BASE}")
+    print(f"  Dashboard dir:   {DASHBOARD_DIR}")
+    print(f"  Trino endpoint:  {TRINO_HOST}:{TRINO_PORT}")
+    print()
 
+    # Wait for Superset to be ready
+    wait_for_superset()
+
+    # Authenticate
     s = api_session()
     print("[OK] Authenticated with Superset API\n")
 
-    db_id = get_database_id(s)
+    # Register or find the Trino database connection
+    print("--- Registering Database Connection ---")
+    db_id = create_or_get_database(s)
     print(f"[OK] Database id: {db_id}\n")
 
-    # ── 1. Create Datasets ───────────────────────────────────────────────
-    print("--- Creating Datasets ---")
-    ds_daily = create_dataset(s, db_id, "gold", "daily_trip_stats")
-    ds_hourly = create_dataset(s, db_id, "gold", "hourly_location_analysis")
-    ds_revenue = create_dataset(s, db_id, "gold", "revenue_by_payment_type")
-    ds_clean = create_dataset(s, db_id, "silver", "nyc_taxi_clean")
-    print()
+    # Load dashboard definitions
+    print("--- Loading Dashboard Definitions ---")
+    definitions = load_dashboard_definitions(DASHBOARD_DIR)
+    if not definitions:
+        print("  No dashboard JSON files found; nothing to provision.")
+        return
+    print(f"  Found {len(definitions)} dashboard definition(s)\n")
 
-    # ── 2. Create Dashboard (empty first, so we have its ID) ─────────
-    print("--- Creating Dashboard ---")
-    dash_id = create_dashboard_empty(s, "NYC Taxi Lakehouse Analytics")
-    print()
+    # Provision each dashboard
+    total_charts = 0
+    total_dashboards = 0
+    for filepath, definition in definitions:
+        filename = os.path.basename(filepath)
+        title = definition["dashboard_title"]
+        print(f"--- Provisioning: {title} ({filename}) ---")
+        dash_id, n_charts = provision_dashboard(s, db_id, definition)
+        total_dashboards += 1
+        total_charts += n_charts
+        print(f"  Dashboard ready at: {BASE}/superset/dashboard/{dash_id}/\n")
 
-    # ── 3. Create Charts (linked to the dashboard) ───────────────────
-    print("--- Creating Charts ---")
-    chart_ids = []
-    chart_names = []
-
-    # Chart 1: Total Trips by Day of Week (bar chart)
-    name = "Total Trips by Day of Week"
-    cid = create_chart(
-        s,
-        name,
-        ds_daily,
-        "echarts_timeseries_bar",
-        {
-            "datasource": f"{ds_daily}__table",
-            "viz_type": "echarts_timeseries_bar",
-            "x_axis": "day_of_week",
-            "metrics": [{"label": "Total Trips", "expressionType": "SQL", "sqlExpression": "SUM(total_trips)"}],
-            "groupby": [],
-            "order_desc": True,
-            "row_limit": 10,
-            "color_scheme": "supersetColors",
-            "show_legend": True,
-            "x_axis_title": "Day of Week (1=Mon, 7=Sun)",
-            "y_axis_title": "Total Trips",
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 2: Average Fare by Day of Week (line chart)
-    name = "Average Fare by Day of Week"
-    cid = create_chart(
-        s,
-        name,
-        ds_daily,
-        "echarts_timeseries_line",
-        {
-            "datasource": f"{ds_daily}__table",
-            "viz_type": "echarts_timeseries_line",
-            "x_axis": "day_of_week",
-            "metrics": [{"label": "Avg Fare", "expressionType": "SQL", "sqlExpression": "AVG(avg_fare)"}],
-            "groupby": [],
-            "row_limit": 10,
-            "color_scheme": "supersetColors",
-            "show_legend": True,
-            "x_axis_title": "Day of Week",
-            "y_axis_title": "Average Fare ($)",
-            "y_axis_format": "$,.2f",
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 3: Revenue by Payment Type (pie chart)
-    name = "Revenue by Payment Type"
-    cid = create_chart(
-        s,
-        name,
-        ds_revenue,
-        "pie",
-        {
-            "datasource": f"{ds_revenue}__table",
-            "viz_type": "pie",
-            "metric": {"label": "Total Revenue", "expressionType": "SQL", "sqlExpression": "SUM(total_revenue)"},
-            "groupby": ["payment_type"],
-            "color_scheme": "supersetColors",
-            "show_legend": True,
-            "show_labels": True,
-            "label_type": "key_percent",
-            "number_format": "$,.2f",
-            "row_limit": 10,
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 4: Trips by Payment Type (bar chart)
-    name = "Trip Count by Payment Type"
-    cid = create_chart(
-        s,
-        name,
-        ds_revenue,
-        "echarts_timeseries_bar",
-        {
-            "datasource": f"{ds_revenue}__table",
-            "viz_type": "echarts_timeseries_bar",
-            "x_axis": "payment_type",
-            "metrics": [{"label": "Trip Count", "expressionType": "SQL", "sqlExpression": "SUM(trip_count)"}],
-            "groupby": [],
-            "row_limit": 10,
-            "color_scheme": "supersetColors",
-            "show_legend": True,
-            "x_axis_title": "Payment Type",
-            "y_axis_title": "Number of Trips",
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 5: Hourly Trip Volume (bar chart)
-    name = "Trip Volume by Hour of Day"
-    cid = create_chart(
-        s,
-        name,
-        ds_hourly,
-        "echarts_timeseries_bar",
-        {
-            "datasource": f"{ds_hourly}__table",
-            "viz_type": "echarts_timeseries_bar",
-            "x_axis": "hour_of_day",
-            "metrics": [{"label": "Trip Count", "expressionType": "SQL", "sqlExpression": "SUM(trip_count)"}],
-            "groupby": [],
-            "order_desc": False,
-            "row_limit": 24,
-            "color_scheme": "supersetColors",
-            "show_legend": True,
-            "x_axis_title": "Hour of Day (0-23)",
-            "y_axis_title": "Number of Trips",
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 6: Hourly Revenue (line chart)
-    name = "Revenue by Hour of Day"
-    cid = create_chart(
-        s,
-        name,
-        ds_hourly,
-        "echarts_timeseries_line",
-        {
-            "datasource": f"{ds_hourly}__table",
-            "viz_type": "echarts_timeseries_line",
-            "x_axis": "hour_of_day",
-            "metrics": [{"label": "Hourly Revenue", "expressionType": "SQL", "sqlExpression": "SUM(hourly_revenue)"}],
-            "groupby": [],
-            "row_limit": 24,
-            "color_scheme": "supersetColors",
-            "show_legend": True,
-            "x_axis_title": "Hour of Day",
-            "y_axis_title": "Revenue ($)",
-            "y_axis_format": "$,.2f",
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 7: Total Revenue KPI (big number)
-    name = "Total Revenue (All Trips)"
-    cid = create_chart(
-        s,
-        name,
-        ds_daily,
-        "big_number_total",
-        {
-            "datasource": f"{ds_daily}__table",
-            "viz_type": "big_number_total",
-            "metric": {"label": "Total Revenue", "expressionType": "SQL", "sqlExpression": "SUM(total_revenue)"},
-            "y_axis_format": "$,.2f",
-            "header_font_size": 0.4,
-            "subheader_font_size": 0.15,
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 8: Total Trips KPI (big number)
-    name = "Total Trips (All Data)"
-    cid = create_chart(
-        s,
-        name,
-        ds_daily,
-        "big_number_total",
-        {
-            "datasource": f"{ds_daily}__table",
-            "viz_type": "big_number_total",
-            "metric": {"label": "Total Trips", "expressionType": "SQL", "sqlExpression": "SUM(total_trips)"},
-            "y_axis_format": ",d",
-            "header_font_size": 0.4,
-            "subheader_font_size": 0.15,
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 9: Avg Trip Distance (big number)
-    name = "Average Trip Distance"
-    cid = create_chart(
-        s,
-        name,
-        ds_daily,
-        "big_number_total",
-        {
-            "datasource": f"{ds_daily}__table",
-            "viz_type": "big_number_total",
-            "metric": {"label": "Avg Distance", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_distance)"},
-            "y_axis_format": ",.2f",
-            "subheader": "miles",
-            "header_font_size": 0.4,
-            "subheader_font_size": 0.15,
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 10: Avg Trip Duration (big number)
-    name = "Average Trip Duration"
-    cid = create_chart(
-        s,
-        name,
-        ds_daily,
-        "big_number_total",
-        {
-            "datasource": f"{ds_daily}__table",
-            "viz_type": "big_number_total",
-            "metric": {"label": "Avg Duration", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_duration)"},
-            "y_axis_format": ",.1f",
-            "subheader": "minutes",
-            "header_font_size": 0.4,
-            "subheader_font_size": 0.15,
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 11: Trip Distance Distribution (histogram via bar)
-    name = "Avg Distance vs Avg Fare by Location"
-    cid = create_chart(
-        s,
-        name,
-        ds_daily,
-        "echarts_timeseries_bar",
-        {
-            "datasource": f"{ds_daily}__table",
-            "viz_type": "echarts_timeseries_bar",
-            "x_axis": "pickup_location_id",
-            "metrics": [
-                {"label": "Avg Distance", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_distance)"},
-                {"label": "Avg Fare", "expressionType": "SQL", "sqlExpression": "AVG(avg_fare)"},
-            ],
-            "groupby": [],
-            "order_desc": True,
-            "row_limit": 20,
-            "color_scheme": "supersetColors",
-            "show_legend": True,
-            "x_axis_title": "Pickup Location ID",
-            "y_axis_title": "Avg Value",
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    # Chart 12: Top pickup locations by revenue (table)
-    name = "Top 15 Pickup Locations by Revenue"
-    cid = create_chart(
-        s,
-        name,
-        ds_daily,
-        "table",
-        {
-            "datasource": f"{ds_daily}__table",
-            "viz_type": "table",
-            "metrics": [
-                {"label": "Total Revenue", "expressionType": "SQL", "sqlExpression": "SUM(total_revenue)"},
-                {"label": "Total Trips", "expressionType": "SQL", "sqlExpression": "SUM(total_trips)"},
-                {"label": "Avg Fare", "expressionType": "SQL", "sqlExpression": "AVG(avg_fare)"},
-                {"label": "Avg Distance", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_distance)"},
-            ],
-            "groupby": ["pickup_location_id"],
-            "order_desc": True,
-            "row_limit": 15,
-            "color_pn": True,
-            "include_search": True,
-            "table_timestamp_format": "smart_date",
-        },
-        dashboard_ids=[dash_id],
-    )
-    chart_ids.append(cid)
-    chart_names.append(name)
-
-    print(f"\n[OK] Created {len(chart_ids)} charts\n")
-
-    # ── 4. Update Dashboard Layout ───────────────────────────────────────
-    print("--- Updating Dashboard Layout ---")
-    update_dashboard_layout(s, dash_id, "NYC Taxi Lakehouse Analytics", chart_ids, chart_names)
-    print(f"\n{'=' * 60}")
-    print(f"Dashboard ready at: {BASE}/superset/dashboard/{dash_id}/")
-    print(f"{'=' * 60}")
+    # Summary
+    print("=" * 60)
+    print(f"Provisioning complete: {total_dashboards} dashboard(s), {total_charts} chart(s)")
+    print(f"Superset UI: {BASE}")
+    print("=" * 60)
 
 
 if __name__ == "__main__":

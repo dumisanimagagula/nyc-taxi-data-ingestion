@@ -1,0 +1,175 @@
+{
+  "dashboard_title": "NYC Taxi - Location Hotspots",
+  "description": "Identify NYC taxi location hotspots: busiest pickup and dropoff locations, route patterns, and location-level revenue analysis from the gold layer.",
+  "published": true,
+  "refresh_frequency": 300,
+  "color_scheme": "supersetColors",
+  "datasets": [
+    {"schema": "gold", "table": "hourly_location_analysis"},
+    {"schema": "gold", "table": "daily_trip_stats"}
+  ],
+  "charts": [
+    {
+      "slice_name": "Unique Pickup Locations",
+      "description": "Total number of unique pickup locations in the data",
+      "viz_type": "big_number_total",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "metric": {"label": "Unique Pickups", "expressionType": "SQL", "sqlExpression": "COUNT(DISTINCT pickup_location_id)"},
+        "y_axis_format": ",d",
+        "header_font_size": 0.4,
+        "subheader_font_size": 0.15
+      }
+    },
+    {
+      "slice_name": "Unique Dropoff Locations",
+      "description": "Total number of unique dropoff locations in the data",
+      "viz_type": "big_number_total",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "metric": {"label": "Unique Dropoffs", "expressionType": "SQL", "sqlExpression": "COUNT(DISTINCT dropoff_location_id)"},
+        "y_axis_format": ",d",
+        "header_font_size": 0.4,
+        "subheader_font_size": 0.15
+      }
+    },
+    {
+      "slice_name": "Total Location Revenue",
+      "description": "Total revenue across all locations",
+      "viz_type": "big_number_total",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "metric": {"label": "Total Revenue", "expressionType": "SQL", "sqlExpression": "SUM(total_revenue)"},
+        "y_axis_format": "$,.2f",
+        "header_font_size": 0.4,
+        "subheader_font_size": 0.15
+      }
+    },
+    {
+      "slice_name": "Avg Fare Across Locations",
+      "description": "Overall average fare across all locations",
+      "viz_type": "big_number_total",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "metric": {"label": "Avg Fare", "expressionType": "SQL", "sqlExpression": "AVG(avg_fare)"},
+        "y_axis_format": "$,.2f",
+        "header_font_size": 0.4,
+        "subheader_font_size": 0.15
+      }
+    },
+    {
+      "slice_name": "Top 20 Pickup Locations by Trip Count",
+      "description": "Busiest pickup locations ranked by number of trips",
+      "viz_type": "echarts_timeseries_bar",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "x_axis": "pickup_location_id",
+        "metrics": [{"label": "Trip Count", "expressionType": "SQL", "sqlExpression": "SUM(trip_count)"}],
+        "groupby": [],
+        "order_desc": true,
+        "row_limit": 20,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "x_axis_title": "Pickup Location ID",
+        "y_axis_title": "Total Trips"
+      }
+    },
+    {
+      "slice_name": "Top 20 Dropoff Locations by Trip Count",
+      "description": "Busiest dropoff locations ranked by number of trips",
+      "viz_type": "echarts_timeseries_bar",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "x_axis": "dropoff_location_id",
+        "metrics": [{"label": "Trip Count", "expressionType": "SQL", "sqlExpression": "SUM(trip_count)"}],
+        "groupby": [],
+        "order_desc": true,
+        "row_limit": 20,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "x_axis_title": "Dropoff Location ID",
+        "y_axis_title": "Total Trips"
+      }
+    },
+    {
+      "slice_name": "Top 15 Pickup Locations by Revenue",
+      "description": "Highest revenue-generating pickup locations",
+      "viz_type": "echarts_timeseries_bar",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "x_axis": "pickup_location_id",
+        "metrics": [{"label": "Total Revenue", "expressionType": "SQL", "sqlExpression": "SUM(total_revenue)"}],
+        "groupby": [],
+        "order_desc": true,
+        "row_limit": 15,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "x_axis_title": "Pickup Location ID",
+        "y_axis_title": "Total Revenue ($)",
+        "y_axis_format": "$,.0f"
+      }
+    },
+    {
+      "slice_name": "Pickup Location Hourly Heatmap",
+      "description": "Trip volume by pickup location and hour of day",
+      "viz_type": "echarts_timeseries_bar",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "x_axis": "hour_of_day",
+        "metrics": [{"label": "Trip Count", "expressionType": "SQL", "sqlExpression": "SUM(trip_count)"}],
+        "groupby": ["pickup_location_id"],
+        "order_desc": true,
+        "row_limit": 240,
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "stack": "Stack",
+        "x_axis_title": "Hour of Day",
+        "y_axis_title": "Trip Count"
+      }
+    },
+    {
+      "slice_name": "Top Pickup-Dropoff Routes",
+      "description": "Most popular pickup-to-dropoff routes by trip count",
+      "viz_type": "table",
+      "dataset": {"schema": "gold", "table": "hourly_location_analysis"},
+      "params": {
+        "metrics": [
+          {"label": "Trip Count", "expressionType": "SQL", "sqlExpression": "SUM(trip_count)"},
+          {"label": "Avg Fare", "expressionType": "SQL", "sqlExpression": "AVG(avg_fare)"},
+          {"label": "Total Revenue", "expressionType": "SQL", "sqlExpression": "SUM(total_revenue)"},
+          {"label": "Avg Duration (min)", "expressionType": "SQL", "sqlExpression": "AVG(avg_duration)"},
+          {"label": "Avg Distance", "expressionType": "SQL", "sqlExpression": "AVG(avg_distance)"}
+        ],
+        "groupby": ["pickup_location_id", "dropoff_location_id"],
+        "order_desc": true,
+        "row_limit": 25,
+        "include_search": true,
+        "table_timestamp_format": "smart_date"
+      }
+    },
+    {
+      "slice_name": "Location Performance Summary",
+      "description": "Comprehensive metrics for each pickup location",
+      "viz_type": "table",
+      "dataset": {"schema": "gold", "table": "daily_trip_stats"},
+      "params": {
+        "metrics": [
+          {"label": "Total Trips", "expressionType": "SQL", "sqlExpression": "SUM(total_trips)"},
+          {"label": "Total Revenue", "expressionType": "SQL", "sqlExpression": "SUM(total_revenue)"},
+          {"label": "Avg Fare", "expressionType": "SQL", "sqlExpression": "AVG(avg_fare)"},
+          {"label": "Avg Distance", "expressionType": "SQL", "sqlExpression": "AVG(avg_trip_distance)"},
+          {"label": "Total Passengers", "expressionType": "SQL", "sqlExpression": "SUM(total_passengers)"}
+        ],
+        "groupby": ["pickup_location_id"],
+        "order_desc": true,
+        "row_limit": 30,
+        "include_search": true
+      }
+    }
+  ],
+  "layout": {
+    "cols_per_row": 4,
+    "kpi_row": [0, 1, 2, 3],
+    "chart_rows": [[4, 5], [6, 7], [8, 9]]
+  }
+}
