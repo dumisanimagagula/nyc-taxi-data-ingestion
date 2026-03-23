@@ -194,5 +194,3 @@ airflow/logs/
 
 # Ingestion logs
 bronze_ingestion_full.log
-
-.github/
