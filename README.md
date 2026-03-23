@@ -205,6 +205,7 @@ nyc-taxi-data-ingestion/
 │   ├── environments/               # Dev/staging/prod overrides
 │   ├── datasets/                   # Dataset definitions
 │   ├── schemas/                    # Config validation schemas
+│   ├── dags/                       # DAG-level config
 │   └── airflow/                    # Airflow variables per environment
 │
 ├── bronze/                          # Raw data ingestion
@@ -226,13 +227,16 @@ nyc-taxi-data-ingestion/
 ├── src/                             # Shared library code
 │   ├── config_loader.py            # Core config loading
 │   ├── config_validator.py         # Config validation
+│   ├── config_version_manager.py   # Config versioning
 │   ├── enhanced_config_loader.py   # Enhanced loader with env support
+│   ├── environment_config_manager.py # Environment management
 │   ├── exceptions.py               # Custom exceptions
 │   └── data_quality/               # Quality framework
 │
 ├── airflow/                         # Orchestration
 │   └── dags/
-│       └── nyc_taxi_medallion_dag.py  # Main pipeline DAG
+│       ├── nyc_taxi_medallion_dag.py  # Main pipeline DAG
+│       └── dag_factory.py          # Dynamic DAG generation
 │
 ├── tests/                           # Test suite
 │   ├── unit/                       # Fast isolated tests
@@ -240,15 +244,20 @@ nyc-taxi-data-ingestion/
 │   ├── e2e/                        # Full pipeline tests
 │   └── airflow/                    # DAG validation tests
 │
-├── docs/                            # All documentation (30+ guides)
+├── infrastructure/                  # Cloud infrastructure
+│   └── terraform-gcp/             # GCP Terraform (GCS, BigQuery, IAM)
+│
+├── docs/                            # Documentation (17 guides)
 ├── scripts/                         # Setup & utility scripts
 ├── config.examples/                 # Example pipeline configs
-├── archive/                         # Legacy pre-lakehouse scripts
+├── architecture/                    # Architecture diagrams
 ├── trino/                           # Query engine config
 ├── superset/                        # Dashboard definitions
 ├── docker-init-scripts/             # DB & Hive init scripts
 │
 ├── docker-compose.yaml              # Full stack definition
+├── Dockerfile                       # Ingestor image
+├── Dockerfile.airflow               # Airflow image
 ├── requirements.txt                 # Python dependencies
 └── README.md                        # This file
 ```
@@ -464,16 +473,6 @@ rows = cursor.fetchall()
 
 ## 🚀 Production Deployment
 
-### Kubernetes Deployment
-
-This platform is designed to run on Kubernetes. Key considerations:
-
-1. **Persistent Volumes**: MinIO data, Metastore DB
-2. **Secrets Management**: Use Kubernetes secrets for credentials
-3. **Resource Limits**: Set appropriate CPU/memory limits
-4. **Autoscaling**: Configure HPA for Spark workers
-5. **Monitoring**: Integrate with Prometheus/Grafana
-
 ### Cloud Deployment (GCP)
 
 This project includes Terraform-managed GCP infrastructure using **free-tier-only** resources with a **$2 budget cap**:
@@ -514,11 +513,18 @@ docker exec lakehouse-dbt dbt test --profiles-dir /usr/app
 | [Architecture](docs/ARCHITECTURE.md) | System design deep dive |
 | [Configuration](docs/CONFIGURATION.md) | Detailed config options |
 | [Config Examples](docs/CONFIG_EXAMPLES.md) | Ready-to-use YAML samples |
+| [Config Management](docs/CONFIG_MANAGEMENT.md) | Config versioning & environments |
+| [Datasets Config](docs/DATASETS_CONFIG.md) | Dataset definition reference |
 | [Deployment](docs/DEPLOYMENT.md) | Production setup guide |
-| [Infrastructure](docs/INFRASTRUCTURE.md) | Docker & service setup |
+| [Infrastructure](docs/INFRASTRUCTURE.md) | Docker & cloud infrastructure |
+| [Airflow Setup](docs/AIRFLOW_SETUP.md) | Airflow installation & config |
+| [Airflow DAG Design](docs/AIRFLOW_DAG_DESIGN.md) | DAG patterns & best practices |
+| [Batch Ingestion](docs/BATCH_INGESTION.md) | Batch pipeline guide |
 | [Data Quality](docs/DATA_QUALITY.md) | Quality framework & checks |
+| [Zones Reference](docs/ZONES_README.md) | Taxi zone lookup data |
 | [Performance](docs/PERFORMANCE_OPTIMIZATION.md) | Optimization guide |
 | [Testing](docs/TESTING.md) | Test suite & coverage |
+| [Testing Architecture](docs/TESTING_ARCHITECTURE.md) | Test design & strategy |
 | [Quick Reference](docs/QUICK_REFERENCE.md) | Common commands |
 
 ## 🤝 Contributing
