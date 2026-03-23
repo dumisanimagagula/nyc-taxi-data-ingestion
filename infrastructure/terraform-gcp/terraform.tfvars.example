@@ -1,0 +1,21 @@
+# ============================================================================
+# GCP Free-Tier Configuration
+# ============================================================================
+# Copy this file to terraform.tfvars and fill in your values.
+# DO NOT commit terraform.tfvars — it is gitignored.
+# ============================================================================
+
+gcp_project_id = "your-gcp-project-id"
+gcp_region     = "us-central1"
+environment    = "dev"
+project_name   = "nyc-taxi-lakehouse"
+
+# Storage — US multi-region gets 5 GB free Standard storage
+gcs_location      = "US"
+gcs_storage_class = "STANDARD"
+
+# BigQuery — 10 GB storage + 1 TB queries/month free
+bigquery_location = "US"
+
+# Billing — budget alert capped at $2
+billing_account_id = "your-billing-account-id"

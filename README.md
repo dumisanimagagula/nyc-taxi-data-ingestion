@@ -474,12 +474,27 @@ This platform is designed to run on Kubernetes. Key considerations:
 4. **Autoscaling**: Configure HPA for Spark workers
 5. **Monitoring**: Integrate with Prometheus/Grafana
 
-### Cloud Deployment
+### Cloud Deployment (GCP)
 
-- **S3 instead of MinIO**: Change `s3.endpoint` in configs
-- **AWS Glue**: Replace Hive Metastore with Glue catalog
-- **Managed Airflow**: Use AWS MWAA, GCP Composer, or Astronomer
-- **Managed Spark**: Use EMR, Dataproc, or Databricks
+This project includes Terraform-managed GCP infrastructure using **free-tier-only** resources with a **$2 budget cap**:
+
+- **GCS Buckets**: Bronze (90-day lifecycle), Silver (180-day), Gold (permanent) — replaces MinIO for cloud storage
+- **BigQuery**: Analytics dataset with partitioned/clustered tables (`daily_trip_stats`, `revenue_by_payment_type`, `hourly_location_analysis`)
+- **IAM**: Dedicated service account with least-privilege roles (`storage.objectAdmin`, `bigquery.dataEditor`, `bigquery.jobUser`)
+- **Budget Alert**: $2 hard cap with notifications at 50%, 90%, 100%
+
+```bash
+# Deploy GCP infrastructure
+cd infrastructure/terraform-gcp
+terraform init && terraform plan && terraform apply
+```
+
+See [Infrastructure Guide](docs/INFRASTRUCTURE.md#cloud-infrastructure-gcp) for full resource inventory and Terraform details.
+
+**Managed Service Alternatives:**
+- **Managed Airflow**: GCP Composer, AWS MWAA, or Astronomer
+- **Managed Spark**: Dataproc, EMR, or Databricks
+- **Catalog**: AWS Glue or BigQuery as metastore
 
 ## 🧪 Testing
 

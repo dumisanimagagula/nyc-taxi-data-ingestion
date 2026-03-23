@@ -507,6 +507,79 @@ docker inspect <container-name> | grep -A 10 Health
 docker-compose restart <service-name>
 ```
 
+## Cloud Infrastructure (GCP)
+
+In addition to the local Docker stack, the project includes Terraform-managed GCP infrastructure for cloud-native data storage and analytics. All resources use GCP free tier with a **$2 hard budget cap**.
+
+### Deployed Resources
+
+| Resource | Type | Details |
+|---|---|---|
+| `nyc-taxi-lakehouse-bronze-dev` | GCS Bucket | 90-day lifecycle, Standard storage |
+| `nyc-taxi-lakehouse-silver-dev` | GCS Bucket | 180-day lifecycle, Standard storage |
+| `nyc-taxi-lakehouse-gold-dev` | GCS Bucket | No lifecycle (permanent), Standard storage |
+| `nyc_taxi_lakehouse_dev` | BigQuery Dataset | US location |
+| `daily_trip_stats` | BigQuery Table | DAY partition on `pickup_date`, clustered by `pickup_location_id` |
+| `revenue_by_payment_type` | BigQuery Table | MONTH partition on `period_start`, clustered by `payment_type` |
+| `hourly_location_analysis` | BigQuery Table | Clustered by `pickup_location_id`, `hour_of_day` |
+| `nyc-taxi-pipe-dev` | Service Account | Pipeline identity with scoped IAM roles |
+| Budget alert | Billing Budget | $2 cap with 50%/90%/100% thresholds |
+
+### IAM Roles
+
+The pipeline service account has three roles:
+
+- `roles/storage.objectAdmin` — Read/write GCS buckets
+- `roles/bigquery.dataEditor` — Read/write BigQuery tables
+- `roles/bigquery.jobUser` — Run BigQuery queries
+
+### Enabled APIs
+
+- `storage.googleapis.com`
+- `bigquery.googleapis.com`
+- `iam.googleapis.com`
+- `billingbudgets.googleapis.com`
+
+### Cost Guardrails
+
+- All resources are within GCP Always Free limits (5 GB GCS, 10 GB BigQuery storage, 1 TB queries/month)
+- $2 billing budget with email alerts at 50%, 90%, and 100%
+- Estimated monthly cost: **$0.00**
+
+### Terraform Directory Structure
+
+```
+infrastructure/terraform-gcp/
+  main.tf              # Root module: APIs, modules, budget alert
+  variables.tf         # Input variable definitions
+  terraform.tfvars     # Environment-specific values
+  outputs.tf           # Output values (bucket names, SA email, etc.)
+  providers.tf         # Google provider config
+  backend.tf           # Local backend (no remote state costs)
+  modules/
+    storage/           # GCS buckets (bronze, silver, gold)
+    bigquery/          # Dataset and analytics tables
+    iam/               # Service account and role bindings
+```
+
+### Terraform Commands
+
+```bash
+cd infrastructure/terraform-gcp
+
+# Initialize providers
+terraform init
+
+# Preview changes
+terraform plan
+
+# Deploy resources
+terraform apply
+
+# Tear down all resources
+terraform destroy
+```
+
 ## See Also
 
 - [Deployment Guide](./DEPLOYMENT.md) - Deployment procedures
