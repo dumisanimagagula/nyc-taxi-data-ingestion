@@ -573,4 +573,4 @@ docker-compose up -d
 - [Infrastructure Documentation](./INFRASTRUCTURE.md) - Detailed service specs
 - [Architecture](./ARCHITECTURE.md) - System design
 - [Configuration](./CONFIGURATION.md) - Config management
-- [Quick Start](./QUICK_START.md) - Getting started
+- [Getting Started](./GETTING_STARTED.md) - Setup guide

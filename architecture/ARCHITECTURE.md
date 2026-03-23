@@ -4,8 +4,17 @@
 This document provides a high-level overview of the NYC Taxi Data Lakehouse architecture, following a medallion (Bronze/Silver/Gold) pattern. The architecture is designed for scalable, reproducible, and analytics-ready data processing using open-source tools and cloud-native patterns.
 
 ## Architecture Diagram
-- The main architecture diagram is maintained in `nyc-taxi-data-ingestion-architecture.drawio` (open with draw.io/diagrams.net).
-- A PNG/PDF export should be included for quick reference (add `nyc-taxi-data-ingestion-architecture.png` or `.pdf` when available).
+
+![NYC Taxi Data Lakehouse Architecture](nyc-taxi-data-ingestion-architecture.drawio.png)
+
+The diagram is available in multiple formats:
+
+| Format | File | Usage |
+|--------|------|-------|
+| PNG | `nyc-taxi-data-ingestion-architecture.drawio.png` | Quick reference / embedding |
+| JPG | `nyc-taxi-data-ingestion-architecture.jpg` | Quick reference / embedding |
+| PDF | `nyc-taxi-data-ingestion-architecture.drawio.pdf` | Print-friendly |
+| Draw.io | `nyc-taxi-data-ingestion-architecture.drawio` | Editable source (open with [diagrams.net](https://www.diagrams.net/)) |
 
 ## Key Components
 - **Bronze Layer:**
@@ -38,11 +47,7 @@ This document provides a high-level overview of the NYC Taxi Data Lakehouse arch
 
 ## Version & Maintenance
 - Diagram version: v1.0 (2026-02-25)
-- Edit the `.drawio` file for updates; export PNG/PDF after major changes.
-
-## How to Edit the Diagram
-- Open `nyc-taxi-data-ingestion-architecture.drawio` with diagrams.net (web or desktop)
-- Make changes, save, and export as PNG/PDF for documentation
+- Edit the `.drawio` file for updates; re-export PNG/PDF after major changes.
 
 ---
 For more details, see the main [README.md](../README.md) and [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).

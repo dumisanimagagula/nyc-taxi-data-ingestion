@@ -322,7 +322,6 @@ jobs:
 - INFRASTRUCTURE.md
 - INFRASTRUCTURE_IMPLEMENTATION_SUMMARY.md
 - QUICK_REFERENCE.md
-- QUICK_START.md
 - TESTING.md
 - ZONES_README.md
 - DOCUMENTATION_QUALITY_SUMMARY.md (this file)
@@ -337,8 +336,7 @@ jobs:
 **Getting Started**:
 
 - README.md - Project overview and quick start
-- GETTING_STARTED.md - Detailed setup guide
-- docs/QUICK_START.md - Fast track setup
+- GETTING_STARTED.md - Consolidated setup & usage guide (merged with former QUICK_START.md)
 - docs/QUICK_REFERENCE.md - Command reference
 
 **Architecture**:

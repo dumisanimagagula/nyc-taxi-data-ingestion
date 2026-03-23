@@ -512,4 +512,4 @@ docker-compose restart <service-name>
 - [Deployment Guide](./DEPLOYMENT.md) - Deployment procedures
 - [Architecture](./ARCHITECTURE.md) - System architecture details
 - [Configuration](./CONFIGURATION.md) - Configuration management
-- [Quick Start](./QUICK_START.md) - Getting started guide
+- [Getting Started](./GETTING_STARTED.md) - Setup guide

@@ -2,6 +2,8 @@
 
 ## Overview
 
+![Architecture Diagram](../architecture/nyc-taxi-data-ingestion-architecture.drawio.png)
+
 This platform implements a **medallion architecture** (Bronze → Silver → Gold) using modern open-source data tools. The key principle is **separation of concerns**: Airflow controls _when_ things run, not _how_ data is transformed.
 
 ## Architecture Layers
