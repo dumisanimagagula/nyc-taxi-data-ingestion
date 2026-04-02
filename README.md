@@ -244,10 +244,25 @@ nyc-taxi-data-ingestion/
 │   ├── e2e/                        # Full pipeline tests
 │   └── airflow/                    # DAG validation tests
 │
-├── infrastructure/                  # Cloud infrastructure
-│   └── terraform-gcp/             # GCP Terraform (GCS, BigQuery, IAM)
+├── infrastructure/                  # Cloud & K8s infrastructure
+│   ├── terraform/                 # Generic Terraform modules
+│   │   ├── environments/          # Per-env tfvars
+│   │   └── modules/               # Reusable TF modules
+│   ├── terraform-gcp/             # GCP-specific Terraform
+│   │   ├── modules/
+│   │   │   ├── bigquery/          # BigQuery dataset & tables
+│   │   │   ├── composer/          # Cloud Composer (managed Airflow)
+│   │   │   ├── dataproc/          # Dataproc (managed Spark)
+│   │   │   ├── functions/         # Cloud Functions v2 triggers
+│   │   │   ├── iam/               # Service accounts & roles
+│   │   │   └── storage/           # GCS buckets (Bronze/Silver/Gold)
+│   │   ├── main.tf               # Root module wiring
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   └── k8s/                       # Kubernetes manifests
+│       └── base/                  # Base Kustomize resources
 │
-├── docs/                            # Documentation (17 guides)
+├── docs/                            # Documentation (18 guides)
 ├── scripts/                         # Setup & utility scripts
 ├── config.examples/                 # Example pipeline configs
 ├── architecture/                    # Architecture diagrams
@@ -475,25 +490,41 @@ rows = cursor.fetchall()
 
 ### Cloud Deployment (GCP)
 
-This project includes Terraform-managed GCP infrastructure using **free-tier-only** resources with a **$2 budget cap**:
+This project includes Terraform-managed GCP infrastructure with both **free-tier foundational** resources and **optional managed service** modules:
+
+#### Foundational (always deployed)
 
 - **GCS Buckets**: Bronze (90-day lifecycle), Silver (180-day), Gold (permanent) — replaces MinIO for cloud storage
 - **BigQuery**: Analytics dataset with partitioned/clustered tables (`daily_trip_stats`, `revenue_by_payment_type`, `hourly_location_analysis`)
 - **IAM**: Dedicated service account with least-privilege roles (`storage.objectAdmin`, `bigquery.dataEditor`, `bigquery.jobUser`)
-- **Budget Alert**: $2 hard cap with notifications at 50%, 90%, 100%
+- **Budget Alert**: Configurable hard cap with notifications at 50%, 90%, 100%
+
+#### Optional Managed Services (feature-flagged)
+
+| Module | Variable | What it provides |
+|--------|----------|------------------|
+| **Dataproc** | `enable_dataproc = true` | Managed Spark cluster with autoscaling & Iceberg connector |
+| **Cloud Composer** | `enable_composer = true` | Managed Airflow (Composer 2, Small environment) |
+| **Cloud Functions** | `enable_functions = true` | Event-driven trigger on GCS Bronze bucket writes |
 
 ```bash
 # Deploy GCP infrastructure
 cd infrastructure/terraform-gcp
 terraform init && terraform plan && terraform apply
+
+# Enable optional modules
+terraform apply -var="enable_dataproc=true" -var="enable_composer=true"
 ```
 
-See [Infrastructure Guide](docs/INFRASTRUCTURE.md#cloud-infrastructure-gcp) for full resource inventory and Terraform details.
+#### Estimated Costs
 
-**Managed Service Alternatives:**
-- **Managed Airflow**: GCP Composer, AWS MWAA, or Astronomer
-- **Managed Spark**: Dataproc, EMR, or Databricks
-- **Catalog**: AWS Glue or BigQuery as metastore
+| Environment | Config | Monthly Cost |
+|-------------|--------|--------------|
+| Dev | Foundational only | ~$0 (free tier) |
+| Staging | + Dataproc (preemptible) | ~$15 |
+| Production | + Dataproc + Composer + Functions | ~$400 |
+
+See [GCP Deployment Guide](docs/GCP_DEPLOYMENT.md) for full walkthrough, and [Infrastructure Guide](docs/INFRASTRUCTURE.md#cloud-infrastructure-gcp) for resource inventory.
 
 ## 🧪 Testing
 
@@ -516,6 +547,7 @@ docker exec lakehouse-dbt dbt test --profiles-dir /usr/app
 | [Config Management](docs/CONFIG_MANAGEMENT.md) | Config versioning & environments |
 | [Datasets Config](docs/DATASETS_CONFIG.md) | Dataset definition reference |
 | [Deployment](docs/DEPLOYMENT.md) | Production setup guide |
+| [GCP Deployment](docs/GCP_DEPLOYMENT.md) | GCP managed services deployment |
 | [Infrastructure](docs/INFRASTRUCTURE.md) | Docker & cloud infrastructure |
 | [Airflow Setup](docs/AIRFLOW_SETUP.md) | Airflow installation & config |
 | [Airflow DAG Design](docs/AIRFLOW_DAG_DESIGN.md) | DAG patterns & best practices |
