@@ -67,3 +67,35 @@ variable "billing_account_id" {
   description = "GCP billing account ID (for budget alerts)"
   type        = string
 }
+
+# ---- Optional Compute Modules (NOT free tier) ------------------------------
+
+variable "enable_dataproc" {
+  description = "Enable Dataproc Spark cluster (costs money)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_composer" {
+  description = "Enable Cloud Composer managed Airflow (costs money)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_functions" {
+  description = "Enable Cloud Functions event triggers (free tier: 2M invocations/month)"
+  type        = bool
+  default     = false
+}
+
+variable "function_source_archive_path" {
+  description = "Local path to the zipped Cloud Function source (required when enable_functions = true)"
+  type        = string
+  default     = ""
+}
+
+variable "function_source_archive_hash" {
+  description = "Hash of the function source zip for cache-busting deploys"
+  type        = string
+  default     = ""
+}

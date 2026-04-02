@@ -58,3 +58,34 @@ output "environment" {
   description = "Deployment environment"
   value       = var.environment
 }
+
+# --- Dataproc (optional) -----------------------------------------------------
+
+output "dataproc_cluster_name" {
+  description = "Dataproc Spark cluster name (empty if disabled)"
+  value       = var.enable_dataproc ? module.dataproc[0].cluster_name : ""
+}
+
+# --- Composer (optional) -----------------------------------------------------
+
+output "composer_environment_name" {
+  description = "Cloud Composer environment name (empty if disabled)"
+  value       = var.enable_composer ? module.composer[0].composer_environment_name : ""
+}
+
+output "composer_airflow_uri" {
+  description = "Cloud Composer Airflow web UI URI (empty if disabled)"
+  value       = var.enable_composer ? module.composer[0].airflow_uri : ""
+}
+
+# --- Cloud Functions (optional) ----------------------------------------------
+
+output "function_name" {
+  description = "Cloud Function name (empty if disabled)"
+  value       = var.enable_functions ? module.functions[0].function_name : ""
+}
+
+output "function_uri" {
+  description = "Cloud Function trigger URI (empty if disabled)"
+  value       = var.enable_functions ? module.functions[0].function_uri : ""
+}

@@ -113,12 +113,18 @@ class SilverTransformer:
             raise ConfigurationError(f"Configuration loading failed: {e}") from e
 
     def _init_spark(self) -> SparkSession:
-        """Initialize Spark session with Iceberg support"""
+        """Initialize Spark session with Iceberg support.
+
+        Supports both S3/MinIO and GCS storage backends.  When
+        ``infrastructure.gcs`` is present in the config, GCS-specific Hadoop
+        properties are set instead of S3.
+        """
         logger.info("Initializing Spark session with Iceberg...")
 
         # Get config
         spark_config = self.config.get("infrastructure", {}).get("spark", {})
         s3_config = self.config.get("infrastructure", {}).get("s3", {})
+        gcs_config = self.config.get("infrastructure", {}).get("gcs", {})
         metastore_config = self.config.get("infrastructure", {}).get("metastore", {})
         metastore_uri = metastore_config.get("uri", "thrift://hive-metastore:9083")
 
@@ -135,33 +141,84 @@ class SilverTransformer:
             .config("spark.sql.catalog.lakehouse.uri", metastore_uri)
             .config("hive.metastore.uris", metastore_uri)
             .config("spark.hadoop.hive.metastore.uris", metastore_uri)
-            # S3/MinIO configuration
-            .config("spark.hadoop.fs.s3a.endpoint", s3_config.get("endpoint", "http://minio:9000"))
-            .config("spark.hadoop.fs.s3a.access.key", s3_config.get("access_key", "minio"))
-            .config("spark.hadoop.fs.s3a.secret.key", s3_config.get("secret_key", "minio123"))
-            .config("spark.hadoop.fs.s3a.path.style.access", "true")
-            .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
         )
 
-        # If target S3 info exists under the silver target, set Iceberg warehouse to S3 path
-        try:
-            target_s3 = self.config.get("silver", {}).get("target", {}).get("s3", {})
-            if target_s3 and target_s3.get("bucket"):
-                path_prefix = target_s3.get("path_prefix", "").strip("/")
-                warehouse_path = (
-                    f"s3a://{target_s3['bucket']}/{path_prefix}/warehouse"
-                    if path_prefix
-                    else f"s3a://{target_s3['bucket']}/warehouse"
+        if gcs_config:
+            # GCS storage backend (Dataproc / GKE)
+            logger.info("Configuring Spark for GCS storage backend")
+            spark_builder = (
+                spark_builder.config(
+                    "spark.hadoop.fs.gs.impl",
+                    "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem",
                 )
-                spark_builder = spark_builder.config("spark.sql.catalog.lakehouse.warehouse", warehouse_path)
-                logger.info(f"Configuring Iceberg warehouse: {warehouse_path}")
-        except Exception:
-            logger.debug("No silver-target S3 config available for warehouse setting")
+                .config("spark.hadoop.fs.AbstractFileSystem.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS")
+                .config(
+                    "spark.hadoop.fs.gs.auth.type",
+                    gcs_config.get("auth_type", "SERVICE_ACCOUNT_JSON_KEYFILE"),
+                )
+            )
+            # On Dataproc the credentials are auto-injected; only set
+            # explicitly when a path is provided.
+            credentials_path = os.getenv(
+                "GOOGLE_APPLICATION_CREDENTIALS",
+                gcs_config.get("credentials_path", ""),
+            )
+            if credentials_path:
+                spark_builder = spark_builder.config(
+                    "spark.hadoop.google.cloud.auth.service.account.json.keyfile",
+                    credentials_path,
+                )
+            if gcs_config.get("project_id"):
+                spark_builder = spark_builder.config(
+                    "spark.hadoop.fs.gs.project.id",
+                    gcs_config["project_id"],
+                )
+        else:
+            # S3/MinIO storage backend (default / Docker Compose)
+            spark_builder = (
+                spark_builder.config("spark.hadoop.fs.s3a.endpoint", s3_config.get("endpoint", "http://minio:9000"))
+                .config("spark.hadoop.fs.s3a.access.key", s3_config.get("access_key", "minio"))
+                .config("spark.hadoop.fs.s3a.secret.key", s3_config.get("secret_key", "minio123"))
+                .config("spark.hadoop.fs.s3a.path.style.access", "true")
+                .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+            )
+
+        # Set Iceberg warehouse path from silver target config
+        warehouse_path = self._resolve_warehouse_path()
+        if warehouse_path:
+            spark_builder = spark_builder.config("spark.sql.catalog.lakehouse.warehouse", warehouse_path)
+            logger.info("Configuring Iceberg warehouse: %s", warehouse_path)
 
         spark = spark_builder.getOrCreate()
 
         logger.info("✓ Spark session initialized")
         return spark
+
+    def _resolve_warehouse_path(self) -> str | None:
+        """Resolve the Iceberg warehouse path from config.
+
+        Checks for GCS target first, then falls back to S3.
+
+        Returns:
+            Warehouse URI string or None if not configured.
+        """
+        silver_target = self.config.get("silver", {}).get("target", {})
+
+        # GCS target
+        gcs_cfg = silver_target.get("gcs", {})
+        if gcs_cfg and gcs_cfg.get("bucket"):
+            prefix = gcs_cfg.get("path_prefix", "").strip("/")
+            base = f"gs://{gcs_cfg['bucket']}"
+            return f"{base}/{prefix}/warehouse" if prefix else f"{base}/warehouse"
+
+        # S3 / MinIO target
+        s3_cfg = silver_target.get("s3", {})
+        if s3_cfg and s3_cfg.get("bucket"):
+            prefix = s3_cfg.get("path_prefix", "").strip("/")
+            base = f"s3a://{s3_cfg['bucket']}"
+            return f"{base}/{prefix}/warehouse" if prefix else f"{base}/warehouse"
+
+        return None
 
     def _cache_dataframe(self, df: DataFrame, stage: str, perf_key: str) -> DataFrame:
         """Cache DataFrame if configured for the given stage.
@@ -195,17 +252,31 @@ class SilverTransformer:
         except Exception as e:
             logger.warning("Namespace creation: %s", e)
 
-    def _configure_s3_path_for_write(self, writer, target: dict):
-        """Configure explicit S3 path for Iceberg table writes.
+    def _configure_storage_path_for_write(self, writer, target: dict):
+        """Configure explicit storage path for Iceberg table writes.
+
+        Supports both S3/MinIO (``s3a://``) and GCS (``gs://``) paths.
 
         Args:
             writer: Iceberg DataFrame writer
-            target: Target configuration dict with S3 settings
+            target: Target configuration dict with S3 or GCS settings
 
         Returns:
             Configured writer object
         """
         try:
+            # GCS takes precedence when present
+            gcs_cfg = target.get("gcs", {})
+            if gcs_cfg and gcs_cfg.get("bucket"):
+                prefix = gcs_cfg.get("path_prefix", "").strip("/")
+                if prefix:
+                    path = "gs://{0}/{1}/{2}".format(gcs_cfg["bucket"], prefix, target["table"])
+                else:
+                    path = "gs://{0}/{1}".format(gcs_cfg["bucket"], target["table"])
+                writer = writer.option("path", path)
+                logger.info("Writing Silver data to GCS path: %s", path)
+                return writer
+
             s3_cfg = target.get("s3", {})
             if s3_cfg and s3_cfg.get("bucket"):
                 prefix = s3_cfg.get("path_prefix", "").strip("/")
@@ -216,8 +287,11 @@ class SilverTransformer:
                 writer = writer.option("path", s3_path)
                 logger.info("Writing Silver data to explicit S3 path: %s", s3_path)
         except Exception as e:
-            logger.debug("Could not compute explicit S3 path for write: %s", e)
+            logger.debug("Could not compute explicit storage path for write: %s", e)
         return writer
+
+    # Keep backward-compatible alias
+    _configure_s3_path_for_write = _configure_storage_path_for_write
 
     def _read_bronze(self) -> DataFrame:
         """Read data from Bronze layer with caching for performance."""

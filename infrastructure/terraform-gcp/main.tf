@@ -46,6 +46,22 @@ resource "google_project_service" "billing_budget" {
   disable_on_destroy         = false
 }
 
+resource "google_project_service" "cloudfunctions" {
+  project = var.gcp_project_id
+  service = "cloudfunctions.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+}
+
+resource "google_project_service" "eventarc" {
+  project = var.gcp_project_id
+  service = "eventarc.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+}
+
 # --- Data Lake Storage (GCS) ------------------------------------------------
 
 module "storage" {
@@ -88,6 +104,109 @@ module "iam" {
     google_project_service.iam,
     google_project_service.storage,
     google_project_service.bigquery,
+  ]
+}
+
+# --- Enable Dataproc API (for Spark jobs) -----------------------------------
+
+resource "google_project_service" "dataproc" {
+  count   = var.enable_dataproc ? 1 : 0
+  project = var.gcp_project_id
+  service = "dataproc.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+}
+
+# --- Enable Composer API (for managed Airflow) ------------------------------
+
+resource "google_project_service" "composer" {
+  count   = var.enable_composer ? 1 : 0
+  project = var.gcp_project_id
+  service = "composer.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+}
+
+# --- Enable Cloud Functions API ---------------------------------------------
+
+resource "google_project_service" "cloudfunctions" {
+  count   = var.enable_functions ? 1 : 0
+  project = var.gcp_project_id
+  service = "cloudfunctions.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+}
+
+resource "google_project_service" "eventarc" {
+  count   = var.enable_functions ? 1 : 0
+  project = var.gcp_project_id
+  service = "eventarc.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+}
+
+# --- Spark Processing (Dataproc) — NOT free tier ----------------------------
+
+module "dataproc" {
+  source = "./modules/dataproc"
+  count  = var.enable_dataproc ? 1 : 0
+
+  project_id            = var.gcp_project_id
+  project_name          = var.project_name
+  environment           = var.environment
+  region                = var.gcp_region
+  staging_bucket        = module.storage.bronze_bucket_name
+  silver_bucket_name    = module.storage.silver_bucket_name
+  service_account_email = module.iam.service_account_email
+
+  depends_on = [google_project_service.dataproc]
+}
+
+# --- Orchestration (Cloud Composer) — NOT free tier -------------------------
+
+module "composer" {
+  source = "./modules/composer"
+  count  = var.enable_composer ? 1 : 0
+
+  project_id            = var.gcp_project_id
+  project_name          = var.project_name
+  environment           = var.environment
+  region                = var.gcp_region
+  enable_composer       = true
+  bronze_bucket_name    = module.storage.bronze_bucket_name
+  silver_bucket_name    = module.storage.silver_bucket_name
+  gold_bucket_name      = module.storage.gold_bucket_name
+  dataproc_cluster_name = var.enable_dataproc ? module.dataproc[0].cluster_name : ""
+  service_account_email = module.iam.service_account_email
+
+  depends_on = [google_project_service.composer]
+}
+
+# --- Event-Driven Triggers (Cloud Functions) — free tier --------------------
+
+module "functions" {
+  source = "./modules/functions"
+  count  = var.enable_functions ? 1 : 0
+
+  project_id            = var.gcp_project_id
+  project_name          = var.project_name
+  environment           = var.environment
+  region                = var.gcp_region
+  staging_bucket        = module.storage.bronze_bucket_name
+  bronze_bucket_name    = module.storage.bronze_bucket_name
+  silver_bucket_name    = module.storage.silver_bucket_name
+  dataproc_cluster_name = var.enable_dataproc ? module.dataproc[0].cluster_name : ""
+  service_account_email = module.iam.service_account_email
+  source_archive_path   = var.function_source_archive_path
+  source_archive_hash   = var.function_source_archive_hash
+
+  depends_on = [
+    google_project_service.cloudfunctions,
+    google_project_service.eventarc,
   ]
 }
 

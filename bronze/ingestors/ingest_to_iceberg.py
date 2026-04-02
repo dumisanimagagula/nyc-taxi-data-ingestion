@@ -175,24 +175,48 @@ class BronzeIngestor:
             raise ConfigurationError(f"Configuration loading failed: {e}") from e
 
     def _init_catalog(self) -> Any:
-        """Initialize Iceberg catalog with Hive Metastore"""
+        """Initialize Iceberg catalog with Hive Metastore.
+
+        Supports both S3/MinIO and GCS storage backends.
+        The backend is selected based on the presence of ``infrastructure.gcs``
+        in the config.  When GCS is configured the catalog uses the
+        ``gcs.project-id`` and ``gcs.credentials`` properties recognised by
+        PyIceberg; otherwise the existing S3/MinIO path is used.
+        """
         logger.info("Initializing Iceberg catalog...")
 
-        # Get config from environment or config file
-        s3_config = self.config.get("infrastructure", {}).get("s3", {})
         metastore_config = self.config.get("infrastructure", {}).get("metastore", {})
+        gcs_config = self.config.get("infrastructure", {}).get("gcs", {})
 
-        catalog = load_catalog(
-            "lakehouse",
-            **{
-                "type": "hive",
-                "uri": os.getenv("HIVE_METASTORE_URI", metastore_config.get("uri")),
-                "s3.endpoint": os.getenv("AWS_ENDPOINT_URL", s3_config.get("endpoint")),
-                "s3.access-key-id": os.getenv("AWS_ACCESS_KEY_ID", s3_config.get("access_key")),
-                "s3.secret-access-key": os.getenv("AWS_SECRET_ACCESS_KEY", s3_config.get("secret_key")),
-                "s3.path-style-access": "true",
-            },
-        )
+        catalog_props: dict[str, str] = {
+            "type": "hive",
+            "uri": os.getenv("HIVE_METASTORE_URI", metastore_config.get("uri")),
+        }
+
+        if gcs_config:
+            # GCS-backed Iceberg catalog
+            logger.info("Configuring catalog for GCS storage backend")
+            if gcs_config.get("project_id"):
+                catalog_props["gcs.project-id"] = gcs_config["project_id"]
+            credentials_path = os.getenv(
+                "GOOGLE_APPLICATION_CREDENTIALS",
+                gcs_config.get("credentials_path", ""),
+            )
+            if credentials_path:
+                catalog_props["gcs.credentials"] = credentials_path
+        else:
+            # S3/MinIO-backed Iceberg catalog (default)
+            s3_config = self.config.get("infrastructure", {}).get("s3", {})
+            catalog_props.update(
+                {
+                    "s3.endpoint": os.getenv("AWS_ENDPOINT_URL", s3_config.get("endpoint")),
+                    "s3.access-key-id": os.getenv("AWS_ACCESS_KEY_ID", s3_config.get("access_key")),
+                    "s3.secret-access-key": os.getenv("AWS_SECRET_ACCESS_KEY", s3_config.get("secret_key")),
+                    "s3.path-style-access": "true",
+                }
+            )
+
+        catalog = load_catalog("lakehouse", **catalog_props)
         logger.info("✓ Catalog initialized successfully")
         return catalog
 
@@ -352,9 +376,8 @@ class BronzeIngestor:
             partition_by = self.config["bronze"]["target"]["storage"].get("partition_by", [])
             partition_spec = create_partition_spec(partition_by, iceberg_fields)
 
-            # Get S3 location
-            s3_config = self.config["bronze"]["target"]["s3"]
-            location = "s3a://{}/{}".format(s3_config["bucket"], s3_config["path_prefix"])
+            # Build storage location — supports both S3/MinIO and GCS
+            location = self._build_table_location("bronze")
 
             # Create table
             table = self._create_catalog_table(table_identifier, schema, location, partition_spec)
@@ -364,6 +387,32 @@ class BronzeIngestor:
 
         except Exception as e:
             raise TableOperationError(f"Failed to create table {table_identifier}: {e}") from e
+
+    def _build_table_location(self, layer: str) -> str:
+        """Build the storage location URI for an Iceberg table.
+
+        Selects between ``gs://`` (GCS) and ``s3a://`` (S3/MinIO) based on the
+        presence of a ``gcs`` block in the layer's target config.
+
+        Args:
+            layer: Config layer key (``"bronze"`` or ``"silver"``).
+
+        Returns:
+            Fully-qualified URI such as ``gs://bucket/prefix`` or
+            ``s3a://bucket/prefix``.
+        """
+        target = self.config[layer]["target"]
+        gcs_target = target.get("gcs", {})
+
+        if gcs_target and gcs_target.get("bucket"):
+            prefix = gcs_target.get("path_prefix", "").strip("/")
+            bucket = gcs_target["bucket"]
+            return f"gs://{bucket}/{prefix}" if prefix else f"gs://{bucket}"
+
+        s3_target = target.get("s3", {})
+        prefix = s3_target.get("path_prefix", "").strip("/")
+        bucket = s3_target["bucket"]
+        return f"s3a://{bucket}/{prefix}" if prefix else f"s3a://{bucket}"
 
     def _build_iceberg_schema(self, arrow_schema: pa.Schema):
         """Build Iceberg schema from Arrow schema"""
